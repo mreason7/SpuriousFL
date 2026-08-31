@@ -1,0 +1,30 @@
+defaults:
+  - job/federated_training@_here_
+  - machine: env
+  - client_opt: all_defaults
+  - server_opt: all_defaults
+  - model_options: mobilenet
+  - dataset_options: cmnist
+  - override hydra/launcher: basic
+  - _self_
+
+hydra:
+  mode: RUN
+  job:
+    chdir: false
+
+seed: 42
+
+client_opt:
+  batch_size: 28
+  epochs: 1
+
+server_opt:
+  rounds: 2
+  optimizer: FedAvgM
+  participation: selection
+  selection_method: random
+  num_active_clients: 4
+
+checkpoint: null
+wandb: false
