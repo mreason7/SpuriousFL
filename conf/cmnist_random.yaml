@@ -1,0 +1,58 @@
+defaults:
+  - job/federated_training@_here_
+  - machine: env
+  - client_opt: all_defaults
+  - server_opt: all_defaults
+  - model_options: mobilenet
+  - dataset_options: cmnist
+  - override hydra/launcher: basic
+  - _self_
+
+hydra:
+  mode: RUN
+  job:
+    chdir: false
+
+# First of the three formal repetitions.
+seed: 42
+
+client_opt:
+  # Paper experimental setup.
+  learning_rate: 0.001
+  batch_size: 28
+  epochs: 1
+
+server_opt:
+  # Paper experimental setup.
+  rounds: 200
+  optimizer: FedAvgM
+  learning_rate: 0.1
+  beta_1: 0.95
+
+  # Random client-selection baseline.
+  participation: selection
+  selection_method: random
+  num_active_clients: 9
+  weight_clients: same
+
+  # Random selection does not need FedDiverse DHT pre-training.
+  # Setting this to zero makes round 1 select 9 clients too.
+  pretrain_rounds: 0
+  client_info: ""
+
+dataset_options:
+  name: CMNIST
+  input_size: 28
+  num_targets: 2
+  num_groups: 2
+  confounding_factor: 0.5
+
+  # CMNIST uses the same GSC distribution as Spawrious GSC.
+  split_mode: spawrious2
+  num_clients: 24
+
+checkpoint: null
+
+# The official code hard-codes the authors' WandB entity.
+# Keep this disabled unless WandB logging is changed to your account.
+wandb: false
