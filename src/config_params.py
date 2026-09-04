@@ -47,6 +47,8 @@ class ServerOptConfig:
     selection_method: str
     weight_list: Optional[List]
     pretrain_rounds: Optional[int]
+    paper_faithful_pretrain: bool
+    dht_collection_rounds: int
     num_active_clients: Optional[int]
     fedpns_alpha: float
     fedpns_beta: float

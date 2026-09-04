@@ -128,6 +128,30 @@ class MyStrategy(fl.server.strategy.FedOpt):
                          tau=tau,
                          *args, **kwargs)
 
+    def paper_faithful_pretrain_enabled(self):
+        """Whether to separate FedAvg pre-training and DHT collection."""
+        return self.conf["server_opt"].get("paper_faithful_pretrain", False)
+
+    def pretrain_round_count(self):
+        """Number of model-update rounds before DHT estimation."""
+        return int(self.conf["server_opt"].get("pretrain_rounds") or 0)
+
+    def dht_collection_round_count(self):
+        """Number of metadata-only rounds immediately after pre-training."""
+        return int(self.conf["server_opt"].get("dht_collection_rounds") or 0)
+
+    def is_dht_collection_round(self, server_round):
+        """Return True for rounds that collect DHTs without model updates."""
+        if not self.paper_faithful_pretrain_enabled():
+            return False
+        pretrain_end = self.pretrain_round_count()
+        collection_end = pretrain_end + self.dht_collection_round_count()
+        return pretrain_end < server_round <= collection_end
+
+    def selection_start_round(self):
+        """First round in which paper-faithful client selection is active."""
+        return self.pretrain_round_count() + self.dht_collection_round_count() + 1
+
     def aggregate_fit(
             self,
             server_round,
@@ -161,6 +185,14 @@ class MyStrategy(fl.server.strategy.FedOpt):
         # Calculate round interaction matrix (data from cache)
         self.track_group_dist(results)
 
+        # A metadata-only round distributes the pre-trained global model and
+        # stores client DHTs. It must not aggregate client parameters or alter
+        # the FedAvgM momentum state.
+        if self.is_dht_collection_round(server_round):
+            self.log_client_weights(results)
+            log(INFO, "DHT collection round %s completed without a model update", server_round)
+            return ndarrays_to_parameters(self.current_weights), metrics_aggregated
+
         # Calculate client weights with post-training methods
         if self.conf["server_opt"]["weight_clients"].startswith("server_post_"):
             results = self.post_calculate_weights(results, server_round=server_round)
@@ -190,6 +222,15 @@ class MyStrategy(fl.server.strategy.FedOpt):
             return None, {}
 
         fedavg_weights_aggregate = parameters_to_ndarrays(fedavg_parameters_aggregated)
+
+        # The paper specifies standard FedAvg for the global pre-training
+        # phase, even when the subsequent federation uses FedAvgM.
+        if (
+            self.paper_faithful_pretrain_enabled()
+            and server_round <= self.pretrain_round_count()
+        ):
+            self.current_weights = fedavg_weights_aggregate
+            return ndarrays_to_parameters(self.current_weights), metrics_aggregated
 
         if self.conf["server_opt"]["optimizer"]=="FedAvg":
             self.current_weights = fedavg_weights_aggregate
@@ -298,7 +339,16 @@ class MyStrategy(fl.server.strategy.FedOpt):
         sample_size, min_num_clients = self.num_fit_clients(
             client_manager.num_available()
         )
-        if "pretrain_rounds" in self.conf["server_opt"].keys() and server_round>self.conf["server_opt"]["pretrain_rounds"]:
+
+        if self.paper_faithful_pretrain_enabled():
+            selection_active = server_round >= self.selection_start_round()
+        else:
+            selection_active = (
+                "pretrain_rounds" in self.conf["server_opt"].keys()
+                and server_round > self.conf["server_opt"]["pretrain_rounds"]
+            )
+
+        if selection_active:
             if self.conf["server_opt"]["participation"] == "selection":
                 if "num_active_clients" in self.conf["server_opt"] and isinstance(self.conf["server_opt"]["num_active_clients"],int):
                     active_clients = self.conf["server_opt"]["num_active_clients"]
@@ -316,6 +366,16 @@ class MyStrategy(fl.server.strategy.FedOpt):
         for client in clients:
             client_config = copy.deepcopy(self.shared_copt_params)     # {}
             client_config["round"] = server_round
+
+            if self.paper_faithful_pretrain_enabled():
+                metadata_only = self.is_dht_collection_round(server_round)
+                client_config["metadata_only"] = metadata_only
+                client_config["update_info"] = metadata_only
+                if metadata_only:
+                    self.client_update_requested.append(int(client.cid))
+                fit_configurations.append((client, FitIns(parameters, client_config)))
+                del client_config
+                continue
 
             if "pretrain_rounds" in self.conf["server_opt"].keys() and server_round<self.conf["server_opt"]["pretrain_rounds"]:
                 client_config["update_info"] = False
@@ -657,4 +717,3 @@ class MyStrategy(fl.server.strategy.FedOpt):
             n_matrix[k] = v/total
         self.round_interaction_matrix = n_matrix
         print("Round Interaction matrix:", n_matrix)
-        

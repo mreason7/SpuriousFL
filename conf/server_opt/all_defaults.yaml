@@ -7,6 +7,8 @@ weight_clients: same
 weight_list: []
 rounds: 200
 pretrain_rounds: 1
+paper_faithful_pretrain: false
+dht_collection_rounds: 0
 participation: selection
 client_info: groupweights_triplets
 selection_method: random

@@ -57,6 +57,17 @@ class FlowerClient(fl.client.NumPyClient):
             self.set_parameters(weights, config)
             shared_metrics = {"cid": self.cid, "datasize":self.train_len}
             train_ds = self.train_data
+
+            # In the paper-faithful flow, the server sends the already
+            # pre-trained global model in a dedicated metadata-only round.
+            # Estimate the DHT without performing or returning a model update.
+            if config.get("metadata_only", False):
+                shared_metrics = self.share_client_params_once(
+                    None, shared_metrics, before_train=True
+                )
+                shared_metrics["loss"] = 0.0
+                return model_utils.get_weights(self.model), 1, shared_metrics
+
             opt = subpopbench.get_subpop_optimizer(self.model, train_ds.dataset, self.conf)
             # Update client info, eg N matrix with model params from server
             if config["update_info"]:
