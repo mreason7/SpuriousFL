@@ -1,0 +1,71 @@
+defaults:
+  - job/federated_training@_here_
+  - machine: env
+  - client_opt: all_defaults
+  - server_opt: all_defaults
+  - model_options: mobilenet
+  - dataset_options: cmnist
+  - override hydra/launcher: basic
+  - _self_
+
+hydra:
+  mode: RUN
+  job:
+    chdir: false
+
+# First of the three formal repetitions. Override with seed=43 and seed=44.
+seed: 42
+
+client_opt:
+  # Paper experimental setup.
+  learning_rate: 0.001
+  batch_size: 28
+  epochs: 1
+
+  # FedDiverse interaction-matrix estimator settings from the official defaults.
+  biased_trainer_steps: 50
+  left_right_trainer_steps: 10
+  generalized_cross_entropy_q: 0.3
+  biased_optimizer: ReSample
+
+model_options:
+  # Paper architecture: ImageNet-pretrained MobileNet v2 with group norm.
+  model_type: MobileNet
+  norm_layer: gn
+  pretrained: true
+
+server_opt:
+  # Paper experimental setup.
+  rounds: 200
+  optimizer: FedAvgM
+  learning_rate: 0.1
+  beta_1: 0.95
+
+  # FedDiverse selection using estimated data-heterogeneity triplets (DHTs).
+  participation: selection
+  selection_method: triplets_stochasticmatrix
+  num_active_clients: 9
+  weight_clients: same
+  client_info: triplets_Npredicted
+
+  # The paper's default T0=1 setting: round 1 visits every client so that
+  # one DHT can be estimated per client; FedDiverse selects 9 clients after it.
+  pretrain_rounds: 1
+  update_static_info_rounds: 0
+
+dataset_options:
+  name: CMNIST
+  input_size: 28
+  num_targets: 2
+  num_groups: 2
+  confounding_factor: 0.5
+
+  # CMNIST uses the same GSC distribution as Spawrious GSC.
+  split_mode: spawrious2
+  num_clients: 24
+
+checkpoint: null
+
+# The official code hard-codes the authors' WandB entity.
+# Keep this disabled unless WandB logging is changed to your account.
+wandb: false
