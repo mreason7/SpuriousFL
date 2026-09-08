@@ -67,6 +67,88 @@ def select_noreplacement(original_M, p):
 
     return _selected_clients
 
+
+def select_3_clients_paper_fixed(M, all_selected_clients, tolerance=1e-6):
+    """Select one diversity triplet without depending on cross-product sign.
+
+    Rows are kept in the paper's rotating priority order.  The first client is
+    sampled from the current priority dimension, the second is the least
+    aligned client, and the third is the client most aligned with the
+    *unoriented* orthogonal axis of the first two clients.
+    """
+    selected_clients = []
+
+    row_sums = M.sum(axis=1, keepdims=True)
+    if np.any(row_sums <= tolerance):
+        raise ValueError("Each DHT dimension must contain positive mass")
+    M /= row_sums
+
+    first = np.random.choice(M.shape[1], p=M[0])
+    selected_clients.append(first)
+
+    with np.errstate(divide="ignore", invalid="ignore"):
+        M /= np.linalg.norm(M, axis=0)
+        M = np.nan_to_num(M, nan=0.0)
+    client1 = np.copy(M[:, first])
+
+    similarities = np.dot(M.T, client1)
+    similarities[all_selected_clients + selected_clients] = np.inf
+    min_value = np.min(similarities)
+    candidates = np.where(
+        np.abs(similarities - min_value) <= tolerance
+    )[0]
+    second = np.random.choice(candidates)
+    selected_clients.append(second)
+    client2 = np.copy(M[:, second])
+
+    M[:, first] = np.zeros(3)
+    M[:, second] = np.zeros(3)
+
+    orthogonal_vector = np.cross(client1, client2)
+    orthogonal_norm = np.linalg.norm(orthogonal_vector)
+    if orthogonal_norm <= tolerance:
+        # Degenerate triplets do not define a unique orthogonal axis.  Fall
+        # back to the client least aligned with both selected clients.
+        scores = np.dot(M.T, client1 + client2)
+        scores[all_selected_clients + selected_clients] = np.inf
+        target_value = np.min(scores)
+    else:
+        orthonormal_vector = orthogonal_vector / orthogonal_norm
+        # A cross-product axis is unchanged when its sign is flipped.  Using
+        # the absolute projection makes selection independent of the
+        # arbitrary order of client1 and client2.
+        scores = np.abs(np.dot(M.T, orthonormal_vector))
+        scores[all_selected_clients + selected_clients] = -np.inf
+        target_value = np.max(scores)
+
+    candidates = np.where(
+        np.abs(scores - target_value) <= tolerance
+    )[0]
+    third = np.random.choice(candidates)
+    selected_clients.append(third)
+    M[:, third] = np.zeros(3)
+
+    # Rotate SC -> CI -> AI as described in the paper.
+    M = M[[2, 0, 1], :]
+    return selected_clients, M
+
+
+def select_noreplacement_paper_fixed(original_M, p):
+    """Select ``p`` clients using the paper-order, sign-invariant strategy."""
+    if original_M.ndim != 2 or original_M.shape[0] != 3:
+        raise ValueError("DHT matrix must have shape (3, num_clients)")
+    if p <= 0 or p > original_M.shape[1]:
+        raise ValueError("p must be between 1 and the number of clients")
+
+    selected_clients = []
+    M = original_M.astype(float, copy=True)
+
+    while len(selected_clients) < p:
+        triplet, M = select_3_clients_paper_fixed(M, selected_clients)
+        selected_clients.extend(triplet[: p - len(selected_clients)])
+
+    return selected_clients
+
 def client_weights_nova(results):
     """FedNova client weights (use together with FedAvgM optimizer): 
     https://github.com/adap/flower/blob/main/baselines/fednova/fednova/strategy.py"""

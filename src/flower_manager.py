@@ -6,7 +6,15 @@ from typing import List, Optional
 from flwr.server.client_proxy import ClientProxy
 from flwr.server.criterion import Criterion
 
-from src.optimizers.weighting_strategy import HCSFed, client_weights_fairfed, client_weights_known_groups, clients_clustering, select_noreplacement, select_clients_with_uniform_distribution
+from src.optimizers.weighting_strategy import (
+    HCSFed,
+    client_weights_fairfed,
+    client_weights_known_groups,
+    clients_clustering,
+    select_clients_with_uniform_distribution,
+    select_noreplacement,
+    select_noreplacement_paper_fixed,
+)
 from src.utils import log
 from logging import ERROR, INFO, DEBUG
 from logging import WARNING
@@ -85,6 +93,16 @@ class MyManager(fl.server.SimpleClientManager):
             metric_list = [client_info[int(cid)] for cid in available_cids]
             sampled_ids, _ = select_clients_with_uniform_distribution(metric_list, self.conf, server_round)
             sampled_cids = [str(cid) for cid in sampled_ids]
+        elif (
+            self.conf["server_opt"]["selection_method"]
+            == "triplets_stochasticmatrix_paper_fixed"
+        ):
+            metric_list = [client_info[int(cid)] for cid in available_cids]
+            M = np.array([[a['SC'],a['AI'],a['CI']] for a in metric_list])
+            selected_positions = select_noreplacement_paper_fixed(
+                M.T, num_clients
+            )
+            sampled_cids = [available_cids[position] for position in selected_positions]
         elif self.conf["server_opt"]["selection_method"].startswith("triplets_stochasticmatrix"):
             metric_list = [client_info[int(cid)] for cid in available_cids]
             M = np.array([[a['SC'],a['AI'],a['CI']] for a in metric_list])
