@@ -1,0 +1,63 @@
+defaults:
+  - job/federated_training@_here_
+  - machine: env
+  - client_opt: all_defaults
+  - server_opt: all_defaults
+  - model_options: mobilenet
+  - dataset_options: cmnist
+  - override hydra/launcher: basic
+  - _self_
+
+hydra:
+  mode: RUN
+  job:
+    chdir: false
+
+# The seed still fixes the CMNIST data split. Model initialization, client
+# DataLoaders, Ray workers, and client selection use official unseeded RNG.
+seed: 42
+
+client_opt:
+  learning_rate: 0.001
+  batch_size: 28
+  epochs: 1
+  biased_trainer_steps: 50
+  left_right_trainer_steps: 10
+  generalized_cross_entropy_q: 0.3
+  biased_optimizer: ReSample
+
+model_options:
+  model_type: MobileNet
+  norm_layer: gn
+  pretrained: true
+
+server_opt:
+  # 201 Flower rounds contain 200 model updates:
+  # 1 FedAvg pre-training + 1 DHT-only + 199 FedDiverse/FedAvgM.
+  rounds: 201
+  optimizer: FedAvgM
+  learning_rate: 0.1
+  beta_1: 0.95
+
+  participation: selection
+  selection_method: triplets_stochasticmatrix
+  num_active_clients: 9
+  weight_clients: same
+  client_info: triplets
+
+  paper_faithful_pretrain: true
+  pretrain_rounds: 1
+  dht_collection_rounds: 1
+  update_static_info_rounds: 0
+
+dataset_options:
+  name: CMNIST
+  input_size: 28
+  num_targets: 2
+  num_groups: 2
+  confounding_factor: 0.5
+  split_mode: spawrious2
+  num_clients: 24
+
+checkpoint: null
+wandb: false

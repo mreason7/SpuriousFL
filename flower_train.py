@@ -38,8 +38,6 @@ global val_ds
 def client_fn(cid: str) -> fl.client.Client:
     """Prepare flower client from ID (following flower documentation)"""
     client_id = int(cid)
-    # Give every client a distinct but reproducible random sequence.
-    utils.set_seed(conf["seed"] + client_id)
 
     client = FlowerClient(client_id, conf)
     client_train_ds = ds_split[client_id]
@@ -166,8 +164,6 @@ def main(cfg: Config):
     hydra_cfg = HydraConfig.get()
     conf_name = hydra_cfg.job.config_name
     conf = OmegaConf.to_container(cfg, resolve=True)
-    # Fix model initialization, data splitting, and server-side sampling.
-    utils.set_seed(conf["seed"])
     base_start_date = datetime.now()
     # Get the current run number from Hydra and add it as seconds
     try:
