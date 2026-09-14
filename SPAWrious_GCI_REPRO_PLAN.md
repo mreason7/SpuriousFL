@@ -35,7 +35,15 @@ conda activate spurious
 
 python - <<'PY'
 from hydra import compose, initialize
+from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
+from src.config_params import Config
+
+# flower_train.py registers this structured config before Hydra starts.
+# A standalone compose script must perform the same registration explicitly.
+ConfigStore.instance().store(
+    group="job", name="federated_training", node=Config
+)
 
 for name in (
     "spawrious_gci_random",
@@ -63,8 +71,15 @@ Random 应为 200 rounds、random；FedDiverse 应为 201 rounds、
 ```bash
 python - <<'PY'
 from hydra import compose, initialize
+from hydra.core.config_store import ConfigStore
 from omegaconf import OmegaConf
+from src.config_params import Config
 from src.datasets import data_preparation
+
+# Match the ConfigStore registration performed by flower_train.py.
+ConfigStore.instance().store(
+    group="job", name="federated_training", node=Config
+)
 
 with initialize(version_base=None, config_path="conf"):
     cfg = compose(config_name="spawrious_gci_random")
@@ -387,4 +402,3 @@ grep '^worst_group_mean_minus_reproduced_random=' \
 5. 如 GCI 恢复正向提升，下一步复现 Spawrious GAI；
 6. 如 GCI 再次没有提升，暂停扩大正式实验，转入共享初始化和完整 RNG 的
    受控诊断。
-
