@@ -63,8 +63,9 @@ FedDiverse 相对 Random 的优势未在当前三次运行中复现。该结果�
 - GPU：NVIDIA GeForce RTX 4090
 - CMNIST 冻结分支：`paper-faithful-official-rng`
 - CMNIST 冻结标签：`cmnist-gsc-official-rng-v1`（提交 `e1aeb84`）
-- 当前工作分支：`reproduce-spawrious-gsc`
-- 当前分支基线提交：`62bc37c`（加入论文式 Spawrious GSC 配置）
+- Spawrious GSC 冻结分支：`reproduce-spawrious-gsc`
+- Spawrious GSC 冻结标签：`spawrious-gsc-official-rng-v1`（提交 `a2959a6`）
+- 当前工作分支：`reproduce-spawrious-gci`
 
 关键提交：
 
