@@ -19,8 +19,9 @@ accuracy。表中“本次结果”使用总体标准差，不选择中间最佳
 | Spawrious GSC | 87.7497 ± 0.0744 | 87.7497 ± 1.3650 | 0.0000 | 86.27 ± 1.12 | 88.01 ± 0.96 | +1.74 | 绝对值接近，相对优势未复现 |
 | Spawrious GCI | 89.6425 ± 1.5364 | 91.0620 ± 1.4475 | +1.4196 | 87.59 ± 2.00 | 89.91 ± 1.91 | +2.32 | 主要结论基本复现成功 |
 
-下一步：确认 Spawrious GCI 产物已备份，然后复现 **Spawrious GAI**。已完成的
-CMNIST GSC、Spawrious GSC 和 Spawrious GCI 不再增加正式运行或选择性补跑。
+Spawrious GSC/GCI 的 checkpoint、日志、配置和元数据均已完成本地备份；
+GCI 已冻结。当前阶段是在 `reproduce-spawrious-gai` 分支复现
+**Spawrious GAI**。已完成的数据集不再增加正式运行或选择性补跑。
 
 ## 2. 仓库、分支与冻结点
 
@@ -28,15 +29,17 @@ CMNIST GSC、Spawrious GSC 和 Spawrious GCI 不再增加正式运行或选择�
 |---|---|---|---|
 | CMNIST GSC | `paper-faithful-official-rng` | `e1aeb84`；标签 `cmnist-gsc-official-rng-v1` | 已冻结 |
 | Spawrious GSC | `reproduce-spawrious-gsc` | `a2959a6`；标签 `spawrious-gsc-official-rng-v1` | 已冻结并推送 |
-| Spawrious GCI | `reproduce-spawrious-gci` | 标签 `spawrious-gci-official-rng-v1` | 已冻结 |
+| Spawrious GCI | `reproduce-spawrious-gci` | `61a6581`；标签 `spawrious-gci-official-rng-v1` | 已冻结并推送 |
+| Spawrious GAI | `reproduce-spawrious-gai` | 起点 `61a6581` | 当前分支，已推送 |
 
 关键实现提交：
 
 - `b71d998`：加入论文式 FedAvg 预训练、DHT-only 收集与模型更新调度；
 - `d679cca`：移除额外全局/客户端播种，恢复发布代码的训练 RNG 行为；
 - `62bc37c`：加入 Spawrious GSC 正式配置；
-- `965d5de`：加入 Spawrious GCI 正式配置与复现计划；
-- `2c250b6`：修复独立 Hydra 检查缺少动态 ConfigStore 注册的问题。
+- `965d5de`：加入 Spawrious GCI 正式配置；
+- `2c250b6`：修复独立 Hydra 检查缺少动态 ConfigStore 注册的问题；
+- `61a6581`：记录 GCI 正式结果并作为 GCI 冻结点。
 
 仓库位置：
 
@@ -160,8 +163,9 @@ FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 - FedDiverse：`logs/spawrious_gsc/predicted_official_rng/`；
 - 选择频率诊断：
   `logs/spawrious_gsc/predicted_official_rng/client_selection_frequency.txt`；
-- 本地备份目标：
-  `checkpoints/local_backup/spawrious_gsc_official_rng_v1/`。
+- 本地完整备份：
+  `checkpoints/local_backup/spawrious_gsc_official_rng_v1/`，包含 6 个
+  checkpoint、两组日志及总结、正式配置源码、Git 元数据和环境信息。
 
 结论：FedDiverse 均值比论文低 `0.2603`，绝对性能接近论文；Random 比论文
 高 `1.4797`，导致论文报告的 `+1.74` 相对优势在本次三次均值中变为 0。
@@ -173,8 +177,7 @@ FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 
 - Random：`conf/spawrious_gci_random.yaml`；
 - FedDiverse：`conf/spawrious_gci_feddiverse_paper.yaml`；
-- 数据划分：`split_mode: spawrious_GCI`；
-- 运行清单：`SPAWrious_GCI_REPRO_PLAN.md`。
+- 数据划分：`split_mode: spawrious_GCI`。
 
 | seed | Random 测试准确率 | Random worst-group | FedDiverse 测试准确率 | FedDiverse worst-group | 提升 |
 |---:|---:|---:|---:|---:|---:|
@@ -200,8 +203,9 @@ FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 - Random 总结：`spawrious_gci_random_official_rng_summary.txt`；
 - FedDiverse 总结：
   `spawrious_gci_feddiverse_predicted_official_rng_summary.txt`；
-- 本地备份目标：
-  `checkpoints/local_backup/spawrious_gci_official_rng_v1/`。
+- 本地完整备份：
+  `checkpoints/local_backup/spawrious_gci_official_rng_v1/`，包含 6 个
+  checkpoint、两组日志及总结、正式配置源码、Git 元数据和环境信息。
 
 结论：FedDiverse 恢复了论文中的平均方法排序和正向优势，主要结论基本复现。
 seed 42 的负提升作为正式结果保留，不选择性补跑。
@@ -354,18 +358,16 @@ Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘�
 
 ## 7. 后续工作与边界
 
-1. 完成并核验两个独立本地备份：
-   `spawrious_gsc_official_rng_v1` 与 `spawrious_gci_official_rng_v1`；
-2. 提交本次精简后的状态文档，在 GCI 结果提交上创建标签
-   `spawrious-gci-official-rng-v1`；
-3. 从 GCI 冻结点建立 `reproduce-spawrious-gai` 分支；
-4. Spawrious GAI 使用 `split_mode: spawrious_GAI`、25 个客户端、每轮选择
+已完成 GSC/GCI 独立备份、GCI 结果提交与标签冻结，并已从冻结点建立和推送
+`reproduce-spawrious-gai`。后续仅推进 GAI：
+
+1. Spawrious GAI 使用 `split_mode: spawrious_GAI`、25 个客户端、每轮选择
    9 个客户端；
-5. 论文目标：Random `85.86 ± 2.56`，FedDiverse `87.28 ± 1.61`，平均提升
+2. 论文目标：Random `85.86 ± 2.56`，FedDiverse `87.28 ± 1.61`，平均提升
    `1.42` 个百分点；
-6. 按配置解析、数据审计、Random smoke、FedDiverse smoke、Random 三 seed、
+3. 按配置解析、数据审计、Random smoke、FedDiverse smoke、Random 三 seed、
    FedDiverse 三 seed、总结与冻结的顺序执行；
-7. 自研阶段另建分支并采用完整受控播种协议，在同一协议下重跑所有基线，不与
+4. 自研阶段另建分支并采用完整受控播种协议，在同一协议下重跑所有基线，不与
    本文档中的 official-unseeded 论文复现结果混用。
 
 ## 8. 新会话提示词
@@ -374,5 +376,6 @@ Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘�
 GSC 和 Spawrious GCI 的 Random/FedDiverse 三数据 seed 正式实验。CMNIST
 基本复现成功；Spawrious GSC 的 FedDiverse 绝对性能接近论文但相对优势未
 复现；Spawrious GCI 恢复了 `+1.4196` 个百分点的平均优势。不要继续补跑上述
-数据集或选择最佳 checkpoint。下一步先核验 GSC/GCI 本地备份并冻结 GCI，
-然后从冻结点建立分支复现 Spawrious GAI。
+数据集或选择最佳 checkpoint。GSC/GCI 完整产物已经分别备份，GCI 已在
+`61a6581` 通过标签 `spawrious-gci-official-rng-v1` 冻结。当前位于
+`reproduce-spawrious-gai`，下一步复现 Spawrious GAI。
