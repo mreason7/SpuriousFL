@@ -1,562 +1,378 @@
 # FedDiverse 复现状态
 
-最后更新：2026-09-14
+最后更新：2026-09-15
 
-## 结论摘要
+## 1. 当前状态
 
-2025 年 FedDiverse 论文的 CMNIST GSC 核心实验已经基本复现成功。
+已完成论文中以下三组 Random 与 FedDiverse 三数据 seed 正式实验：
 
-- 正式 Random（官方未固定训练 RNG 行为）：最差群体准确率
-  `91.49420785 ± 0.48410444`。
-- 正式 FedDiverse（预测 DHT、原始选择器、论文式调度、官方未固定训练
-  RNG 行为）：最差群体准确率 `94.15049962 ± 0.36553036`。
-- 论文结果：Random `92.00 ± 1.61`，FedDiverse `94.01`。
-- 本次 FedDiverse 均值比论文高 `0.14049962` 个百分点；Random 均值比
-  论文低 `0.50579215` 个百分点。
-- FedDiverse 相对 Random 提升 `2.65629177` 个百分点；三个数据 seed
-  上均为正提升。
+1. CMNIST GSC：主要数值、方法排序和相对提升均已复现；
+2. Spawrious GSC：FedDiverse 绝对性能接近论文，相对 Random 的优势未复现；
+3. Spawrious GCI：FedDiverse 相对 Random 的平均优势已基本复现。
 
-因此，论文的核心数值、方法排序和主要结论均已在正常随机波动范围内复现。
-不再需要继续运行 CMNIST Random、Oracle DHT、exact-3/3/3 或额外的
-seed 42 试验。
+所有正式实验均使用数据 seed 42、43、44，报告最终模型的 worst-group
+accuracy。表中“本次结果”使用总体标准差，不选择中间最佳 checkpoint。
 
-Spawrious GSC 的 Random 与 FedDiverse 三数据 seed 正式实验也已完成：
+| 数据集 | 本次 Random | 本次 FedDiverse | 本次提升 | 论文 Random | 论文 FedDiverse | 论文提升 | 判定 |
+|---|---:|---:|---:|---:|---:|---:|---|
+| CMNIST GSC | 91.4942 ± 0.4841 | 94.1505 ± 0.3655 | +2.6563 | 92.00 ± 1.61 | 94.01 ± 0.98 | +2.01 | 基本复现成功 |
+| Spawrious GSC | 87.7497 ± 0.0744 | 87.7497 ± 1.3650 | 0.0000 | 86.27 ± 1.12 | 88.01 ± 0.96 | +1.74 | 绝对值接近，相对优势未复现 |
+| Spawrious GCI | 89.6425 ± 1.5364 | 91.0620 ± 1.4475 | +1.4196 | 87.59 ± 2.00 | 89.91 ± 1.91 | +2.32 | 主要结论基本复现成功 |
 
-- Random：最差群体准确率 `87.74973712 ± 0.07435403`；
-- FedDiverse：最差群体准确率 `87.74973712 ± 1.36495846`；
-- 论文结果：Random `86.27 ± 1.12`，FedDiverse `88.01 ± 0.96`；
-- 本次 FedDiverse 与论文均值相差 `-0.26026288` 个百分点，但相对本次
-  Random 的平均提升为 `0.00000000`。
+下一步：确认 Spawrious GCI 产物已备份，然后复现 **Spawrious GAI**。已完成的
+CMNIST GSC、Spawrious GSC 和 Spawrious GCI 不再增加正式运行或选择性补跑。
 
-因此，Spawrious GSC 的执行流程和 FedDiverse 绝对性能接近论文，但论文中
-FedDiverse 相对 Random 的优势未在当前三次运行中复现。该结果作为正式结果
-保留，不为追求方法排序而选择性补跑或删除 seed。
+## 2. 仓库、分支与冻结点
 
-此前由提交 `ef72933` 加入的全局和客户端确定性播种改变了论文时期官方
-代码的随机行为，并显著压低结果。所有包含这两处播种调用的旧结果现统一
-归类为“固定 RNG 失败诊断”，不再作为正式论文复现结果。
+| 项目 | 分支 | 提交/标签 | 状态 |
+|---|---|---|---|
+| CMNIST GSC | `paper-faithful-official-rng` | `e1aeb84`；标签 `cmnist-gsc-official-rng-v1` | 已冻结 |
+| Spawrious GSC | `reproduce-spawrious-gsc` | `a2959a6`；标签 `spawrious-gsc-official-rng-v1` | 已冻结并推送 |
+| Spawrious GCI | `reproduce-spawrious-gci` | 标签 `spawrious-gci-official-rng-v1` | 已冻结 |
 
-## 复现目标与范围
+关键实现提交：
 
-使用官方 SpuriousFL 源码复现 FedDiverse 论文的核心实验。当前已经完成：
+- `b71d998`：加入论文式 FedAvg 预训练、DHT-only 收集与模型更新调度；
+- `d679cca`：移除额外全局/客户端播种，恢复发布代码的训练 RNG 行为；
+- `62bc37c`：加入 Spawrious GSC 正式配置；
+- `965d5de`：加入 Spawrious GCI 正式配置与复现计划；
+- `2c250b6`：修复独立 Hydra 检查缺少动态 ConfigStore 注册的问题。
 
-- CMNIST GSC：Random 与 FedDiverse；
-- Spawrious GSC：Random 与 FedDiverse。
+仓库位置：
 
-两组实验共同采用：
+- 本地：`C:/Users/zy/Documents/ChatGPT/FedDiverse/SpuriousFL`；
+- 服务器：`/root/SpuriousFL`；
+- 远端：`https://github.com/mreason7/SpuriousFL.git`；
+- 服务器：`cpod-1uk7kkln33pu.podtcp.compshare.cn`；
+- 论文原文：`D:/zotero_file/storage/VZD6UMI6/Németh 等 - 2025 - FedDiverse Tackling Data Heterogeneity in Federated Learning with Diversity-Driven Client Selection.pdf`。
 
-- 对比方法：Random 与 FedDiverse；
-- 聚合优化器：FedAvgM；
-- 客户端总数：24；
-- 每次选择客户端数：9；
-- 模型更新次数：200；
-- 数据划分：`spawrious2`（GSC）；
-- 正式 FedDiverse 使用预测 DHT 和原始选择器，不使用 Oracle 信息。
+## 3. 环境与统一实验协议
 
-论文 PDF 目录：`D:/zotero_file/storage/VZD6UMI6/`。
+### 环境
 
-## 仓库、分支与环境
-
-- 本地仓库：`C:/Users/zy/Documents/ChatGPT/FedDiverse/SpuriousFL`
-- 服务器仓库：`/root/SpuriousFL`
-- Conda 环境：`spurious`
-- GPU：NVIDIA GeForce RTX 4090
-- CMNIST 冻结分支：`paper-faithful-official-rng`
-- CMNIST 冻结标签：`cmnist-gsc-official-rng-v1`（提交 `e1aeb84`）
-- Spawrious GSC 冻结分支：`reproduce-spawrious-gsc`
-- Spawrious GSC 冻结标签：`spawrious-gsc-official-rng-v1`（提交 `a2959a6`）
-- 当前工作分支：`reproduce-spawrious-gci`
-
-关键提交：
-
-- `e0fc5ed`：官方复现基线；
-- `ef72933`：加入确定性播种，现仅保留为失败诊断来源；
-- `0d6c68f`：Random 配置；
-- `db0967b`：发布代码行为的 FedDiverse 配置；
-- `b71d998`：论文式预训练、DHT 收集和模型更新调度；
-- `379bbda`：sign-invariant exact-3/3/3 选择器诊断，不用于正式结果；
-- `d679cca`：从 `flower_train.py` 移除两处额外 `set_seed` 调用。
-
-分支用途：
-
-- `reproduce-paper`：包含确定性播种的早期 Random 与发布代码行为实验；
-- `paper-faithful-pretrain`：论文式预训练和 DHT 收集调度；
-- `paper-faithful-selector-fix`：exact-3/3/3 负向消融；
-- `paper-faithful-official-rng`：当前正式复现分支，恢复论文时期未显式固定
-  训练 RNG 的行为。
-
-### 依赖版本审计
-
-服务器实际环境与仓库 `conda_env.yml` 一致：
-
+- Conda 环境：`spurious`；
+- GPU：NVIDIA GeForce RTX 4090；
 - Python 3.10.14；
-- PyTorch 2.3.0；
-- torchvision 0.18.0；
-- Flower 1.8.0；
-- Ray 2.6.3；
-- NumPy 1.26.4；
-- pandas 2.2.2；
-- Hydra 1.3.2；
-- PyTorch CUDA runtime 12.1。
+- PyTorch 2.3.0，torchvision 0.18.0；
+- PyTorch CUDA runtime 12.1；
+- Flower 1.8.0，Ray 2.6.3；
+- NumPy 1.26.4，pandas 2.2.2，Hydra 1.3.2。
 
-GPU 驱动提供更新的 CUDA 兼容能力，但 PyTorch 使用其随包安装的 CUDA 12.1
-运行库；未发现影响本次复现的依赖偏差。
+服务器 GPU 驱动提供向后兼容能力；训练实际使用 PyTorch 随包安装的 CUDA
+12.1 runtime。
 
-## 正式实验设置
+### 统一模型与优化配置
 
-论文与官方配置共同确认的设置如下：
-
-- CMNIST，`split_mode: spawrious2`，24 个客户端；
-- 每次选择 9 个客户端；
-- MobileNet v2，ImageNet 预训练，GroupNorm；
-- 客户端学习率 0.001，batch size 28，本地训练 1 epoch；
+- 模型：ImageNet 预训练 MobileNet v2，BatchNorm 替换为 GroupNorm；
+- 客户端学习率：0.001；
+- batch size：28；
+- 本地训练：1 epoch；
 - 客户端等权聚合；
-- FedAvgM，服务器学习率 0.1，`beta_1: 0.95`；
-- 总计 200 次模型更新；
-- DHT 估计前先进行一次全局 FedAvg 预训练更新。
+- 服务端：FedAvgM，学习率 0.1，`beta_1: 0.95`；
+- 总客户端数：CMNIST GSC、Spawrious GSC、Spawrious GCI 均为 24；
+- 每轮选择客户端数：9；
+- 每个客户端训练样本数：200，联邦训练总样本数 4800。
 
-正式 DHT 参数采用发布源码最终默认值：
+### Random 与 FedDiverse 调度
 
-- biased trainer steps：50；
-- left-right trainer steps：10；
-- GCE q：0.3；
-- biased optimizer：`ReSample`。
+Random：200 个 Flower round，对应 200 次模型更新，不估计 DHT。
 
-历史的 `100/100/q=0.7/ERM` 参数会得到更差的 AI 估计，未用于正式结果。
+FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 
-## seed 与 RNG 的准确含义
+1. round 1：24 个客户端进行一次标准 FedAvg 预训练更新；
+2. round 2：24 个客户端只估计并上传 DHT，不更新模型或 FedAvgM 动量；
+3. round 3-201：每轮由 FedDiverse 选择 9 个客户端，共 199 次更新。
 
-正式结果中的 `seed=42/43/44` 主要是数据划分 seed，而不是完整训练 seed。
-
-- CMNIST 颜色属性在数据集实现中固定使用 42；
-- 客户端样本索引由配置中的 seed 通过独立 NumPy RNG 生成；
-- 因此相同数据 seed 会得到相同的客户端数据划分；
-- 模型初始化、DataLoader、DHT 训练、客户端选择和 Ray 工作进程不再由
-  `flower_train.py` 统一播种，符合论文时期官方代码行为。
-
-固定数据划分下的重复应写作 `data_seed=42, trial=1/2/3`，不能表述为三次
-完整确定性 seed 42。
-
-### 固定 RNG 失败的代码原因
-
-提交 `ef72933` 曾加入：
-
-- `main` 中的 `utils.set_seed(conf["seed"])`；
-- `client_fn` 中的 `utils.set_seed(conf["seed"] + client_id)`。
-
-第二处可能在 Flower/Ray 重复创建客户端时把客户端随机状态反复重置到同一
-起点，进而改变样本打乱、本地训练、DHT 和选择轨迹。FedDiverse 的选择与
-模型更新形成反馈循环，该偏差被 FedAvgM 动量进一步累积。删除两处调用后，
-Random 和 FedDiverse 都明显恢复，FedDiverse 的恢复幅度尤其大。
-
-## 配置与代码行为
-
-### `conf/cmnist_random.yaml`
-
-Random 正式配置：200 个 Flower round，等于 200 次模型更新；每轮随机选择
-9 个客户端，不进行 DHT 预训练或收集。
-
-### `conf/cmnist_feddiverse.yaml`
-
-发布源码的原始执行顺序：200 个 Flower round；第 1 轮在本地训练前估计
-DHT，并参与 FedAvgM 聚合；第 2 至 200 轮根据 DHT 选择客户端。此行为与
-论文“先预训练、再估计 DHT”的文字顺序不同，只保留为实现差异诊断。
-
-### `conf/cmnist_feddiverse_paper.yaml`
-
-正式论文式配置，共 201 个 Flower 事件、200 次模型更新：
-
-1. 第 1 轮：24 个客户端参与一次标准 FedAvg 预训练更新；
-2. 第 2 轮：24 个客户端仅收集 DHT 元数据，不更新模型或服务器动量；
-3. 第 3 至 201 轮：每轮选择 9 个客户端，进行 199 次 FedDiverse/FedAvgM
-   更新。
-
-正式结果使用：
+正式 FedDiverse 配置：
 
 - `client_info: triplets_Npredicted`；
-- `selection_method: triplets_stochasticmatrix`。
+- `selection_method: triplets_stochasticmatrix`；
+- `biased_trainer_steps: 50`；
+- `left_right_trainer_steps: 10`；
+- `generalized_cross_entropy_q: 0.3`；
+- `biased_optimizer: ReSample`。
 
-### `conf/cmnist_feddiverse_paper_oracle_official_rng_trial1.yaml`
+### seed 的准确含义
 
-仅用于隔离 RNG 影响：论文式调度、Oracle DHT、原始选择器和官方未播种训练
-行为。它不是正式 FedDiverse 主结果。
+正式结果中的 `seed=42/43/44` 主要控制客户端数据划分，并非完整训练 seed。
+模型初始化、DataLoader、DHT 训练、客户端选择和 Ray worker 的随机状态没有被
+统一固定，这是论文时期发布代码的行为。因此逐 seed 差值不能视为严格共享
+训练随机性的配对实验；正式比较口径是三次运行均值。
 
-### `conf/cmnist_feddiverse_paper_oracle_fixed.yaml`
+## 4. 已完成实验与产物索引
 
-仅用于 exact-3/3/3 负向消融：Oracle DHT 加
-`triplets_stochasticmatrix_paper_fixed`。不得作为正式选择器。
+### 4.1 CMNIST GSC
 
-## 正式复现结果
+配置：
 
-以下指标均为百分比。主表沿用本项目约定，报告总体标准差；同时保留样本
-标准差用于统计审计。所有主结果均取最后一次模型更新，不按测试集挑选最佳
-checkpoint。
+- Random：`conf/cmnist_random.yaml`；
+- FedDiverse：`conf/cmnist_feddiverse_paper.yaml`。
 
-### 最终论文对照
-
-| 方法 | 本次最差群体准确率 | 论文最差群体准确率 | 本次减论文 |
-|---|---:|---:|---:|
-| Random | 91.49420785 ± 0.48410444 | 92.00 ± 1.61 | -0.50579215 |
-| FedDiverse | 94.15049962 ± 0.36553036 | 94.01 | +0.14049962 |
-
-FedDiverse 相对 Random 的平均提升为 `2.65629177` 个百分点；论文均值差为
-`2.01` 个百分点。
-
-### 各数据 seed 配对结果
-
-| 数据 seed | Random 测试准确率 | Random 最差群体 | FedDiverse 测试准确率 | FedDiverse 最差群体 | 最差群体提升 |
+| seed | Random 测试准确率 | Random worst-group | FedDiverse 测试准确率 | FedDiverse worst-group | 提升 |
 |---:|---:|---:|---:|---:|---:|
-| 42 | 95.54000000 | 91.81636727 | 95.56000000 | 93.69261477 | +1.87624750 |
-| 43 | 95.66000000 | 91.85628743 | 95.78000000 | 94.58722741 | +2.73093998 |
-| 44 | 95.15000000 | 90.80996885 | 95.92000000 | 94.17165669 | +3.36168784 |
-| 均值 | 95.45000000 | 91.49420785 | 95.75333333 | 94.15049962 | +2.65629177 |
-| 总体标准差 | 0.21771541 | 0.48410444 | 0.14817407 | 0.36553036 | 0.60872135 |
-| 样本标准差 | 0.26664583 | 0.59290443 | 0.18147543 | 0.44768143 | 0.74552835 |
+| 42 | 95.5400 | 91.8164 | 95.5600 | 93.6926 | +1.8762 |
+| 43 | 95.6600 | 91.8563 | 95.7800 | 94.5872 | +2.7309 |
+| 44 | 95.1500 | 90.8100 | 95.9200 | 94.1717 | +3.3617 |
+| 均值 | 95.4500 | 91.4942 | 95.7533 | 94.1505 | +2.6563 |
 
-### 正式 Random checkpoint
+正式 checkpoint：
 
-| 数据 seed | checkpoint |
-|---:|---|
-| 42 | `checkpoints/20260909-104452/final` |
-| 43 | `checkpoints/20260909-112853/final` |
-| 44 | `checkpoints/20260909-121342/final` |
+| 方法 | seed 42 | seed 43 | seed 44 |
+|---|---|---|---|
+| Random | `20260909-104452/final` | `20260909-112853/final` | `20260909-121342/final` |
+| FedDiverse | `20260908-113933/final` | `20260909-025420/final` | `20260909-034311/final` |
 
-### 正式 FedDiverse checkpoint
+产物：
 
-| 数据 seed | checkpoint |
-|---:|---|
-| 42 | `checkpoints/20260908-113933/final` |
-| 43 | `checkpoints/20260909-025420/final` |
-| 44 | `checkpoints/20260909-034311/final` |
+- Random 日志：`logs/random_official_rng/`；
+- FedDiverse 日志：`logs/predicted_official_rng/`；
+- 最终对照：`results/cmnist_gsc_official_rng_final_comparison.csv`；
+- 本地备份：`checkpoints/local_backup/cmnist_gsc_official_rng_v1/`。
 
-### 固定数据划分下的 FedDiverse 训练稳定性
+结论：FedDiverse 三个数据 seed 均优于 Random；本次 FedDiverse 与论文均值
+仅差 `+0.1405` 个百分点，核心数值、排序与结论均已基本复现。
 
-三次均使用 `data_seed=42`，训练 RNG 独立且未显式固定：
+### 4.2 Spawrious GSC
 
-| trial | 测试准确率 | 最差群体准确率 | checkpoint |
-|---:|---:|---:|---|
-| 1 | 95.56000000 | 93.69261477 | `checkpoints/20260908-113933/final` |
-| 2 | 95.74000000 | 93.73253493 | `checkpoints/20260908-123052/final` |
-| 3 | 95.73000000 | 93.92523364 | `checkpoints/20260908-131841/final` |
+配置：
 
-- 测试准确率：`95.67666667 ± 0.08259674`；
-- 最差群体准确率：`93.78346112 ± 0.10156440`；
-- 三次结果高度稳定，说明正式结果不是单次幸运轨迹。
+- Random：`conf/spawrious_gsc_random.yaml`；
+- FedDiverse：`conf/spawrious_gsc_feddiverse_paper.yaml`；
+- 数据划分：`split_mode: spawrious2`。
 
-## official-RNG Oracle 隔离诊断
-
-Oracle DHT、原始选择器、相同 `data_seed=42` 的三次独立训练结果：
-
-| trial | 测试准确率 | 最差群体准确率 | checkpoint |
-|---:|---:|---:|---|
-| 1 | 95.70000000 | 92.25548902 | `checkpoints/20260908-080026/final` |
-| 2 | 95.64000000 | 91.69660679 | `checkpoints/20260908-090017/final` |
-| 3 | 95.96000000 | 93.73052960 | `checkpoints/20260908-103144/final` |
-
-- 测试准确率：`95.76666667 ± 0.13888444`；
-- 最差群体准确率：`92.56087513 ± 0.85796504`。
-
-该实验首先证明 RNG 是强影响因素。预测 DHT 的正式结果高于这组三次 Oracle
-均值，不能解释为预测 DHT 优于真实 DHT，因为两组使用了不同的随机训练
-轨迹；Oracle 仅用于隔离诊断。
-
-## 固定 RNG 失败诊断（非正式结果）
-
-以下实验均包含 `ef72933` 加入的全局和客户端播种调用。它们记录问题定位
-过程，但不得再用于论文主结果。
-
-### 固定 RNG Random
-
-| seed | 测试准确率 | 最差群体准确率 | checkpoint |
-|---:|---:|---:|---|
-| 42 | 93.79000000 | 89.87538941 | `checkpoints/20260903-030721` |
-| 43 | 93.67000000 | 88.30339321 | `checkpoints/20260903-065458` |
-| 44 | 94.29000000 | 91.17764471 | `checkpoints/20260903-080628` |
-
-- 测试准确率：`93.91666667 ± 0.26849374`；
-- 最差群体准确率：`89.78547578 ± 1.17512943`；
-- 样本标准差：`1.43923374`；
-- 相比正式 official-RNG Random 低 `1.70873207` 个百分点。
-
-### 固定 RNG、发布代码执行顺序的 FedDiverse
-
-| seed | 测试准确率 | 最差群体准确率 | checkpoint |
-|---:|---:|---:|---|
-| 42 | 92.82000000 | 84.67065868 | `checkpoints/20260904-022502` |
-| 43 | 93.35000000 | 89.26147705 | `checkpoints/20260904-031212` |
-| 44 | 94.23000000 | 91.65668663 | `checkpoints/20260904-035900` |
-
-最差群体准确率为 `88.52960745 ± 2.89860558`，明显低且波动大。
-
-### 固定 RNG、论文式调度、预测 DHT
-
-| seed | 测试准确率 | 最差群体准确率 | checkpoint |
-|---:|---:|---:|---|
-| 42 | 93.52000000 | 89.66067864 | `checkpoints/20260904-092456` |
-| 43 | 92.62000000 | 87.46105919 | `checkpoints/20260904-120941` |
-| 44 | 94.09000000 | 91.54984424 | `checkpoints/20260904-125651` |
-
-- 测试准确率：`93.41000000 ± 0.60514461`；
-- 最差群体准确率：`89.55719402 ± 1.67084262`；
-- 样本标准差：`2.04635593`；
-- 相比正式 official-RNG FedDiverse 低 `4.59330560` 个百分点；
-- 曾在共同 evaluation 182 达到 `89.89845853 ± 0.56701855`，仍不能解释
-  与论文的差距。
-
-### 固定 RNG、论文式调度、Oracle DHT、原始选择器
-
-| seed | 测试准确率 | 最差群体准确率 | checkpoint |
-|---:|---:|---:|---|
-| 42 | 94.08000000 | 89.98003992 | `checkpoints/20260907-080847` |
-| 43 | 93.82000000 | 89.26147705 | `checkpoints/20260907-085447` |
-| 44 | 94.17000000 | 91.05788423 | `checkpoints/20260907-093954` |
-
-- 测试准确率：`94.02333333 ± 0.14839886`；
-- 最差群体准确率：`90.09980040 ± 0.73825317`；
-- 样本标准差：`0.90417179`。
-
-Oracle 仅恢复少量性能，说明在固定 RNG 失败轨迹下，DHT 预测误差不是主因。
-
-### exact-3/3/3 Oracle 负向消融
-
-仅运行 `data_seed=42`，不得补跑 43/44：
-
-- checkpoint：`checkpoints/20260908-022539`；
-- 201 行权重记录，199 个选择轮均严格选择 3 SC + 3 AI + 3 CI；
-- 最终测试准确率：`93.69000000`；
-- 最终最差群体准确率：`88.54291417`；
-- 最佳最差群体准确率：evaluation 191 的 `91.04361371`；
-- 从最佳到最终下降 `2.50069954` 个百分点；
-- 总结：`logs/cmnist_feddiverse_paper_oracle_fixed_seed42_summary.txt`。
-
-该修改在机械上正确、群体暴露更均衡，但性能更差，只能视为负向消融。
-
-## 数据集与评估审计
-
-正式环境的数据审计结果：
-
-- 原始训练集：60,000；
-- validation：10,000；
-- test：10,000；
-- validation 是 test 的深拷贝，符合当前官方代码行为；
-- 联邦客户端数：24；
-- 每客户端样本数：200；
-- 联邦训练实际使用样本总数：4,800；
-- 客户端真实类型：16 SC、4 AI、4 CI；
-- 测试集群体 `[y0g0,y0g1,y1g0,y1g1]`：
-  `[2571,2568,2505,2356]`；
-- 四个测试群体接近均衡，所有方法使用同一测试集和同一评估函数。
-
-正式 FedDiverse 虽有 201 个 Flower 事件，但第 2 个事件只收集 DHT，不更新
-模型或 FedAvgM 动量，因此与 Random 一样均为 200 次模型更新。
-
-## DHT 与选择器历史诊断
-
-- 日志处理器重复注册会使部分日志出现两次：48 条 True 记录代表 24 个真实
-  DHT，400 条 evaluation 代表 200 次真实 evaluation；
-- SC 相关系数约 0.93–0.96，MAE 约 0.064–0.078；
-- 观察到的 CI 估计正确；
-- AI 相关性接近 0 或为负，预测有向 SC 收缩的趋势；
-- 离线选择器重放与实际计数的相关系数约 0.998，旧怀疑的客户端 ID 映射
-  问题在当前实验中没有实际触发；
-- 原始 Oracle 选择器覆盖 24/24 客户端，有效客户端数约 19.2–19.7；
-- 原始选择器平均组成约为 4 SC、2.5 AI、2.5 CI；
-- DHT 两两 cosine 约 0.286–0.290，Random 约 0.48；
-- 对 one-hot Oracle DHT，原始选择器严格 3/3/3 的概率仅 14.21%。
-
-这些现象有诊断价值，但 official-RNG 正式预测 DHT 已复现论文数值，故不再
-将 AI 估计误差或选择器结构视为阻塞复现的问题。
-
-### `data_seed=42` 的群体暴露负向消融
-
-| 方法 | 最小群体占比 | 到均匀分布的 L1 距离 | reverse-SC 比率 |
-|---|---:|---:|---:|
-| Random | 0.106000 | 0.476222 | 0.395000 |
-| 原始 Oracle | 0.146929 | 0.314461 | 0.276382 |
-| exact-3/3/3 | 0.171273 | 0.237856 | 0.216080 |
-
-聚合群体占比：
-
-- Random：`[0.366444,0.128667,0.133333,0.371556]`；
-- 原始 Oracle：`[0.327610,0.169933,0.175516,0.326940]`；
-- exact-3/3/3：`[0.308850,0.193160,0.192714,0.305276]`。
-
-exact-3/3/3 的群体暴露最均衡，但性能最差，说明 DHT 多样性、聚合数据的
-群体均衡度与最终鲁棒性并非单调关系。
-
-## Spawrious GSC 正式复现
-
-### 实验协议
-
-- 数据集：Spawrious GSC，`split_mode: spawrious2`；
-- 数据 seed：42、43、44，仅控制客户端数据划分；
-- 训练 RNG：遵循发布代码未统一播种的行为；
-- 模型：ImageNet 预训练 MobileNet v2，GroupNorm；
-- 客户端：24 个，每轮选择 9 个；
-- 客户端训练：学习率 0.001，batch size 28，本地训练 1 epoch；
-- 服务端：FedAvgM，学习率 0.1，`beta_1: 0.95`；
-- Random：200 个 Flower round，即 200 次模型更新；
-- FedDiverse：201 个 Flower round，包括 1 次全客户端 FedAvg 预训练、
-  1 次全客户端 DHT-only 收集和 199 次 FedDiverse/FedAvgM 更新，共 200 次
-  模型更新；
-- DHT：`triplets_Npredicted`；
-- 选择器：`triplets_stochasticmatrix`。
-
-正式配置：
-
-- `conf/spawrious_gsc_random.yaml`；
-- `conf/spawrious_gsc_feddiverse_paper.yaml`。
-
-### 三数据 seed 结果
-
-| 数据 seed | Random 测试准确率 | Random 最差群体 | FedDiverse 测试准确率 | FedDiverse 最差群体 | 最差群体差值 |
+| seed | Random 测试准确率 | Random worst-group | FedDiverse 测试准确率 | FedDiverse worst-group | 提升 |
 |---:|---:|---:|---:|---:|---:|
-| 42 | 92.86277603 | 87.85488959 | 92.86277603 | 89.27444795 | +1.41955836 |
-| 43 | 92.78391167 | 87.69716088 | 92.58675079 | 88.01261830 | +0.31545742 |
-| 44 | 92.98107256 | 87.69716088 | 92.38958991 | 85.96214511 | -1.73501577 |
-| 均值 | 92.87592009 | 87.74973712 | 92.61303891 | 87.74973712 | 0.00000000 |
-| 总体标准差 | 0.08102542 | 0.07435403 | 0.19406970 | 1.36495846 | 1.30702449 |
-| 样本标准差 | 0.09923547 | 0.09106471 | 0.23768587 | 1.67172588 | 1.60077154 |
+| 42 | 92.8628 | 87.8549 | 92.8628 | 89.2744 | +1.4196 |
+| 43 | 92.7839 | 87.6972 | 92.5868 | 88.0126 | +0.3155 |
+| 44 | 92.9811 | 87.6972 | 92.3896 | 85.9621 | -1.7350 |
+| 均值 | 92.8759 | 87.7497 | 92.6130 | 87.7497 | 0.0000 |
 
-论文表 I 中 Spawrious GSC 的最差群体准确率为 Random
-`86.27 ± 1.12`、FedDiverse `88.01 ± 0.96`。本次 Random 比论文高
-`1.47973712` 个百分点，FedDiverse 比论文低 `0.26026288` 个百分点。
-论文中的相对提升为 `1.74` 个百分点，本次相对提升为 `0`。
+正式 checkpoint：
 
-该结果的准确表述是：实验流程复现通过，FedDiverse 绝对性能接近论文，
-但其相对 Random 的平均优势未复现。当前只有三个数据 seed，而且训练 RNG
-未固定，因此不能据此断言两种方法总体等价或 FedDiverse 无效。
+| 方法 | seed 42 | seed 43 | seed 44 |
+|---|---|---|---|
+| Random | `20260911-025949/final` | `20260911-035247/final` | `20260911-044304/final` |
+| FedDiverse | `20260911-084525/final` | `20260911-093656/final` | `20260911-102916/final` |
 
-### 正式 checkpoint 与日志
-
-Random：
-
-| 数据 seed | checkpoint |
-|---:|---|
-| 42 | `checkpoints/20260911-025949/final` |
-| 43 | `checkpoints/20260911-035247/final` |
-| 44 | `checkpoints/20260911-044304/final` |
-
-FedDiverse：
-
-| 数据 seed | checkpoint |
-|---:|---|
-| 42 | `checkpoints/20260911-084525/final` |
-| 43 | `checkpoints/20260911-093656/final` |
-| 44 | `checkpoints/20260911-102916/final` |
-
-日志与总结：
+产物：
 
 - Random：`logs/spawrious_gsc/random_official_rng/`；
 - FedDiverse：`logs/spawrious_gsc/predicted_official_rng/`；
-- Random 总结：
-  `spawrious_gsc_random_official_rng_summary.txt`；
+- 选择频率诊断：
+  `logs/spawrious_gsc/predicted_official_rng/client_selection_frequency.txt`；
+- 本地备份目标：
+  `checkpoints/local_backup/spawrious_gsc_official_rng_v1/`。
+
+结论：FedDiverse 均值比论文低 `0.2603`，绝对性能接近论文；Random 比论文
+高 `1.4797`，导致论文报告的 `+1.74` 相对优势在本次三次均值中变为 0。
+流程、配置和 checkpoint 均有效，但相对优势未复现。
+
+### 4.3 Spawrious GCI
+
+配置：
+
+- Random：`conf/spawrious_gci_random.yaml`；
+- FedDiverse：`conf/spawrious_gci_feddiverse_paper.yaml`；
+- 数据划分：`split_mode: spawrious_GCI`；
+- 运行清单：`SPAWrious_GCI_REPRO_PLAN.md`。
+
+| seed | Random 测试准确率 | Random worst-group | FedDiverse 测试准确率 | FedDiverse worst-group | 提升 |
+|---:|---:|---:|---:|---:|---:|
+| 42 | 93.7697 | 91.7981 | 93.2571 | 89.1167 | -2.6814 |
+| 43 | 93.5331 | 88.8013 | 94.0457 | 92.5868 | +3.7855 |
+| 44 | 93.2177 | 88.3281 | 93.8091 | 91.4826 | +3.1546 |
+| 均值 | 93.5068 | 89.6425 | 93.7040 | 91.0620 | +1.4196 |
+
+总体标准差：Random `1.5364`，FedDiverse `1.4475`。本次 Random 比论文高
+`2.0525`，FedDiverse 比论文高 `1.1520`；平均提升比论文少 `0.9004`。
+
+正式 checkpoint：
+
+| 方法 | seed 42 | seed 43 | seed 44 |
+|---|---|---|---|
+| Random | `20260914-032515/final` | `20260914-041522/final` | `20260914-050500/final` |
+| FedDiverse | `20260914-064256/final` | `20260914-073615/final` | `20260914-082934/final` |
+
+产物：
+
+- Random：`logs/spawrious_gci/random_official_rng/`；
+- FedDiverse：`logs/spawrious_gci/predicted_official_rng/`；
+- Random 总结：`spawrious_gci_random_official_rng_summary.txt`；
 - FedDiverse 总结：
-  `spawrious_gsc_feddiverse_predicted_official_rng_summary.txt`；
-- 选择频率诊断：`client_selection_frequency.txt`。
+  `spawrious_gci_feddiverse_predicted_official_rng_summary.txt`；
+- 本地备份目标：
+  `checkpoints/local_backup/spawrious_gci_official_rng_v1/`。
 
-三次 FedDiverse 运行均满足：`EXIT_CODE=0`，第 2 轮为 DHT-only 且不更新
-模型，第 201 轮保存 `final/torchmodel.pt`。三个最终模型文件均存在且 SHA-256
-不同，确认不是重复或缺失的 checkpoint。
+结论：FedDiverse 恢复了论文中的平均方法排序和正向优势，主要结论基本复现。
+seed 42 的负提升作为正式结果保留，不选择性补跑。
 
-### predicted DHT 与客户端选择诊断
+## 5. 数据与完整性审计
 
-`client_weights.csv` 均有 201 行。每个 seed 的客户端选择总计均为
-`1839 = 2×24 + 199×9`：前两轮全部 24 个客户端参与，之后 199 轮每轮选择
-9 个客户端，执行数量完全符合配置。
+### CMNIST
 
-扣除前两轮固定的全客户端参与后，各真实客户端类型的选择次数为：
+- 原始训练集 60,000，validation 10,000，test 10,000；
+- validation 是当前发布代码中 test 的深拷贝；
+- 24 个客户端，每客户端 200 个样本，联邦训练总计 4800；
+- 测试群体 `[y0g0,y0g1,y1g0,y1g1]` 为
+  `[2571,2568,2505,2356]`，接近均衡。
 
-| seed | CI（0-3） | AI（4-7） | 常规 SC（8-22） | 反相关 SC（23） |
+### Spawrious
+
+- 压缩包：`spawrious224__without_domain_adaptation.tar.gz`；
+- 完整压缩包大小：14,393,689,896 bytes；
+- 解压 gzip stream：14,496,634,880 bytes；
+- 数据目录：`/root/SpuriousFL/datasets/spawrious224/`；
+- 使用 beach、snow 两个背景与 labrador、dachshund 两个犬种；
+- train 22,808，validation 2,536，test 2,536；
+- GSC/GCI 均为 24 个客户端，每客户端 200 个样本，共 4800。
+
+每次正式 FedDiverse 运行必须满足：
+
+- `EXIT_CODE=0`；
+- 日志出现 `DHT collection round 2 completed without a model update`；
+- 最终 checkpoint 为 `checkpoints/<exp_id>/final/torchmodel.pt`；
+- `config.yaml`、`client_info.json`、`client_weights.csv` 均存在；
+- `client_weights.csv` 为 201 行；
+- 三个 seed 的最终模型 SHA-256 不同。
+
+## 6. 按复现顺序整理的问题与结论
+
+### 6.1 额外固定 RNG 导致 CMNIST 结果下降
+
+早期提交 `ef72933` 在 `main` 中调用 `set_seed(seed)`，又在每次创建客户端时
+调用 `set_seed(seed + client_id)`。后者会在 Flower/Ray 重建客户端时反复重置
+随机状态，改变 DataLoader、局部训练、DHT 和选择轨迹，并由 FedAvgM 动量
+累积放大。
+
+固定 RNG 的代表性旧结果：
+
+| 设置 | worst-group 均值 ± 总体标准差 |
+|---|---:|
+| Random | 89.7855 ± 1.1751 |
+| 发布代码顺序 FedDiverse | 88.5296 ± 2.8986 |
+| 论文式调度、predicted DHT | 89.5572 ± 1.6708 |
+| 论文式调度、Oracle DHT | 90.0998 ± 0.7383 |
+
+处理：提交 `d679cca` 移除两处额外播种。以上旧结果只保留为失败诊断，不得
+与 official-unseeded 正式结果混用。
+
+### 6.2 发布代码顺序与论文描述不一致
+
+发布代码原本在首轮训练前估计 DHT，并将该轮同时作为模型更新；论文描述是
+先进行 FedAvg 预训练，再估计 DHT。提交 `b71d998` 实现 1 次预训练更新、1 次
+DHT-only 收集和 199 次选择更新，使 Random 与 FedDiverse 都有 200 次模型
+更新。
+
+### 6.3 DHT 与选择器诊断没有形成正式修复
+
+CMNIST 诊断显示：SC 估计相关系数约 0.93-0.96，CI 估计正确，但 AI 估计
+相关性接近 0 或为负，并有向 SC 收缩的趋势。离线重放与实际选择计数相关系数
+约 0.998，未发现客户端 ID 映射错误。
+
+Oracle、固定 3 SC + 3 AI + 3 CI 和最佳 checkpoint 均不能稳定解释或恢复
+official-unseeded 正式结果。exact-3/3/3 虽使聚合群体更均衡，但 seed 42 最终
+worst-group 仅为 `88.5429`，说明 DHT 多样性、群体暴露均衡和最终鲁棒性不是
+简单单调关系。这些改动只作为诊断，不进入正式配置。
+
+### 6.4 恢复 official-unseeded 后 CMNIST 成功
+
+移除额外播种并采用论文式调度后，CMNIST FedDiverse 达到 `94.1505`，三个
+数据 seed 均优于 Random，确认此前主要阻塞来自随机行为改变，而不是必须使用
+Oracle DHT 或修改选择器。
+
+### 6.5 Spawrious 数据集多次下载截断
+
+浏览器首次得到的 5.18 GB 和后续 14.24 GB 文件均被 gzip CRC 与 tar 完整性
+检查判定为截断。使用可续传下载补齐到 14,393,689,896 bytes 后，Python gzip
+CRC 和 `tar -tzf` 均通过，随后上传服务器并解压。仅看资源管理器显示大小不能
+证明压缩包完整，必须同时通过 gzip CRC 和 tar 结构检查。
+
+旧 `spawrious` 包还会检查 `domain_adaptation_ds`；当前项目只使用目录 `0/1`。
+服务器在需要兼容检查时使用 `domain_adaptation_ds -> 0` 符号链接，不改变本次
+训练数据。
+
+### 6.6 Spawrious GSC 绝对性能接近但相对优势消失
+
+三次正式运行与 checkpoint 全部有效。Random 比论文高 `1.4797`，而
+FedDiverse 只比论文低 `0.2603`，较高的本地 Random 基线基本消耗了论文中的
+相对差距。
+
+客户端选择总数严格满足 `2×24 + 199×9 = 1839`。三个 seed 的整体选择集中度
+接近，但客户端类型构成变化明显：
+
+| seed | CI 选择占比 | AI 选择占比 | 常规 SC 占比 | 反相关 SC 占比 |
 |---:|---:|---:|---:|---:|
-| 42 | 687（38.36%） | 347（19.37%） | 730（40.76%） | 27（1.51%） |
-| 43 | 690（38.53%） | 59（3.29%） | 919（51.31%） | 123（6.87%） |
-| 44 | 720（40.20%） | 97（5.42%） | 963（53.77%） | 11（0.61%） |
+| 42 | 38.36% | 19.37% | 40.76% | 1.51% |
+| 43 | 38.53% | 3.29% | 51.31% | 6.87% |
+| 44 | 40.20% | 5.42% | 53.77% | 0.61% |
 
-三个 seed 的总体选择集中度接近，seed 44 并未出现明显更严重的少数客户端
-垄断；主要差异来自所选客户端类型的构成。
+真实 AI 客户端的预测 AI 分量明显偏低，且 DHT 在 round 2 后不再更新，这可能
+是运行方差来源之一。由于数据划分和未固定训练 RNG 同时变化，目前不能建立
+单一因果解释。SC 使用归一化互信息，不区分相关方向，因此反相关客户端的低
+选择频率本身也不能证明算法错误。
 
-按 `spawrious2` 的真实交互矩阵计算，CI、AI、SC 客户端的主导 DHT 分量
-理论上均约为 `0.531`。预测结果中，真实 AI 客户端 4-7 的 AI 值明显偏低：
+### 6.7 checkpoint 与日志曾被误判
 
-- seed 42：约 `0.016-0.181`；
-- seed 43：约 `0.0003-0.053`；
-- seed 44：约 `0.014-0.062`。
+`final` 是目录而不是普通文件；正确检查对象是
+`final/torchmodel.pt`。日志中的相同记录出现两遍来自两个日志 handler，不
+代表同一轮训练或保存执行了两次。
 
-同时，部分真实 SC 客户端被估计出较大的 AI 分量。例如客户端 12 的预测
-AI 在三个 seed 中分别约为 `0.000072`、`0.137825`、`0.180893`，对应的
-FedDiverse 选择次数差异也很大。所有客户端的 `last_round=2`，符合本次静态
-DHT 只在第 2 轮收集、后续不更新的配置。
+### 6.8 GCI 独立 Hydra 检查缺少动态配置注册
 
-这些结果说明 predicted DHT 估计和后续客户端类型构成具有明显的运行间波动，
-可能是 FedDiverse 方差较大的来源之一。目前数据 seed 与未固定的训练 RNG
-同时变化，尚不能建立单一因果解释。另因 SC 使用归一化互信息且不区分相关
-方向，客户端 23 的低选择频率本身不能作为算法错误的证据。
+独立运行 `hydra.compose()` 时曾出现：
 
-## Ray 启动事件
+```text
+Could not load 'job/federated_training'
+```
 
-曾出现 Ray 在第 1 轮前等待 `plasma_store` socket 超时。磁盘、`/dev/shm`
-和内存均充足；日志显示 raylet 实际启动略慢于 Ray 2.6.3 的默认等待时间，
-驱动超时后主动关闭会话。
+`job/federated_training` 由 `flower_train.py` 通过 ConfigStore 动态注册，不是
+磁盘 YAML。正式训练入口不受影响。独立检查脚本需先执行：
 
-处理方式：
+```python
+ConfigStore.instance().store(
+    group="job", name="federated_training", node=Config
+)
+```
 
-- `ray stop --force`；
-- 将旧 `/tmp/ray` 移到带时间戳的备份目录；
-- 关闭无用 Dashboard；
-- 将 Ray object store 显式设为 4 GiB。
+提交 `2c250b6` 已修复复现计划中的配置解析和数据审计脚本。
 
-这些失败均发生在第 1 轮前，没有模型更新，不算有效实验，也不构成结果
-重跑或 cherry-pick。Ray 基础设施参数不改变数据、模型、算法或训练超参数。
+### 6.9 Spawrious GCI 恢复平均正向提升
 
-## 最终结论
+GCI 的 Random 和 FedDiverse 均高于论文绝对值；FedDiverse 平均提高
+`1.4196` 个百分点，恢复论文的方法排序。seed 42 为负提升，另外两个 seed
+为明显正提升。该结果说明 GSC 上没有平均提升不是当前实现对所有 Spawrious
+划分都失效的系统性证据。
 
-1. CMNIST GSC 的 Random 与 FedDiverse 核心实验已经基本复现成功。
-2. 正式 FedDiverse 使用预测 DHT、原始选择器和论文式 200 模型更新调度。
-3. 三个数据 seed 上 FedDiverse 均优于 Random，平均提升 2.6563 个百分点。
-4. 正式 FedDiverse 与论文值仅相差 0.1405 个百分点。
-5. 正式 Random 落在论文 `92.00 ± 1.61` 的波动范围内。
-6. 先 FedAvg 预训练、再收集 DHT 的论文式顺序与发布代码顺序确有差异。
-7. 额外的全局和客户端确定性播种是此前复现失败的主要原因。
-8. 固定 RNG 旧结果仅作为失败诊断保留，不得用于正式主表。
-9. Oracle、exact-3/3/3、最佳 checkpoint 和超参数修改均不是恢复正式结果的
-   必要条件。
-10. 当前 CMNIST 复现阶段结束，不应继续为追求更高数值而增加试验。
-11. Spawrious GSC 的 Random 与 FedDiverse 三数据 seed 实验均完整结束，
-    checkpoint、配置、DHT-only 轮次和客户端选择数量均已验证。
-12. Spawrious GSC FedDiverse 为 `87.74973712 ± 1.36495846`，接近论文
-    `88.01 ± 0.96`；Random 为 `87.74973712 ± 0.07435403`，高于论文
-    `86.27 ± 1.12`。
-13. Spawrious GSC 上论文报告的 FedDiverse 相对 Random 优势未复现；该结果
-    原样保留，不通过选择 seed、最佳 checkpoint 或调参改变正式结论。
-14. predicted DHT 对真实 AI 客户端存在明显估计偏差，选择构成在运行间变化
-    较大，可作为后续受控诊断或自研模块的研究线索，但不阻塞继续复现。
+### 6.10 Ray 启动与 GitHub 网络问题
 
-## 后续工作
+Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘、内存和
+`/dev/shm` 充足后，清理旧 Ray 会话、关闭 Dashboard，并把 object store
+显式设为 4 GiB。失败均发生在模型更新前，不计为有效实验。
 
-当前不再运行新的 CMNIST 或 Spawrious GSC 正式实验：
+本地网络也曾能 ping GitHub 但无法建立 TCP 443/22 连接。切换可用网络后推送
+成功；这是网络连接问题，不是 Git 仓库或提交损坏。
 
-1. 保存 Spawrious GSC 正式 Random 与 FedDiverse 的日志、总结、resolved
-   config、checkpoint、Git 提交号和环境信息；
-2. 提交本状态文档并为 Spawrious GSC 正式结果建立冻结标签；
-3. 下一数据集复现 `Spawrious GCI`，先建立 Random 与 FedDiverse 的论文式
-   独立配置并完成 smoke test，再按数据 seed 42、43、44 正式运行；
-4. Spawrious GCI 继续使用当前已下载的 Spawrious 数据集，配置使用
-   `split_mode: spawrious_GCI`、24 个客户端、每轮选择 9 个客户端；
-5. 论文表 I 的 Spawrious GCI 目标值为 Random `87.59 ± 2.00`、FedDiverse
-   `89.91 ± 1.91`，相对提升 `2.32` 个百分点；
-6. 若 Spawrious GCI 能恢复相对提升，则继续复现 Spawrious GAI；若再次没有
-   提升，再进入固定完整 RNG、共享初始化与预训练状态的受控诊断；
-7. 如进入自研方法阶段，应另行建立严格受控的完整播种协议，并在相同协议下
-   重新运行所有基线，不得与本次官方未播种结果混用。
+## 7. 后续工作与边界
 
-## 新会话提示词
+1. 完成并核验两个独立本地备份：
+   `spawrious_gsc_official_rng_v1` 与 `spawrious_gci_official_rng_v1`；
+2. 提交本次精简后的状态文档，在 GCI 结果提交上创建标签
+   `spawrious-gci-official-rng-v1`；
+3. 从 GCI 冻结点建立 `reproduce-spawrious-gai` 分支；
+4. Spawrious GAI 使用 `split_mode: spawrious_GAI`、25 个客户端、每轮选择
+   9 个客户端；
+5. 论文目标：Random `85.86 ± 2.56`，FedDiverse `87.28 ± 1.61`，平均提升
+   `1.42` 个百分点；
+6. 按配置解析、数据审计、Random smoke、FedDiverse smoke、Random 三 seed、
+   FedDiverse 三 seed、总结与冻结的顺序执行；
+7. 自研阶段另建分支并采用完整受控播种协议，在同一协议下重跑所有基线，不与
+   本文档中的 official-unseeded 论文复现结果混用。
 
-请完整阅读 `REPRO_STATUS.md` 并检查 Git 状态。CMNIST GSC 已基本复现成功：
-official-RNG Random 为 `91.49420785 ± 0.48410444`，正式预测 DHT
-FedDiverse 为 `94.15049962 ± 0.36553036`。Spawrious GSC 三数据 seed 也已
-完成：Random 与 FedDiverse 均值同为 `87.74973712`，FedDiverse 绝对性能
-接近论文 `88.01`，但相对优势未复现。不要继续运行 CMNIST 或 Spawrious GSC
-正式实验，也不要选择性补跑 seed。下一步在新分支复现 Spawrious GCI，使用
-已有 Spawrious 数据、`split_mode: spawrious_GCI`、24 个客户端、每轮选择
-9 个客户端，并先运行 Random 和 FedDiverse smoke test。
+## 8. 新会话提示词
+
+请先阅读 `REPRO_STATUS.md` 并检查 Git 状态。已完成 CMNIST GSC、Spawrious
+GSC 和 Spawrious GCI 的 Random/FedDiverse 三数据 seed 正式实验。CMNIST
+基本复现成功；Spawrious GSC 的 FedDiverse 绝对性能接近论文但相对优势未
+复现；Spawrious GCI 恢复了 `+1.4196` 个百分点的平均优势。不要继续补跑上述
+数据集或选择最佳 checkpoint。下一步先核验 GSC/GCI 本地备份并冻结 GCI，
+然后从冻结点建立分支复现 Spawrious GAI。
