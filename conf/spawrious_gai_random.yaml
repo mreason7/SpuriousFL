@@ -1,0 +1,66 @@
+defaults:
+  - job/federated_training@_here_
+  - machine: env
+  - client_opt: all_defaults
+  - server_opt: all_defaults
+  - model_options: mobilenet
+  - dataset_options: spawrious
+  - override hydra/launcher: basic
+  - _self_
+
+hydra:
+  mode: RUN
+  job:
+    chdir: false
+
+# This seed controls the client data split.
+# Training RNG follows the released official code behavior.
+seed: 42
+
+client_opt:
+  learning_rate: 0.001
+  batch_size: 28
+  epochs: 1
+
+model_options:
+  model_type: MobileNet
+  norm_layer: gn
+  pretrained: true
+
+server_opt:
+  rounds: 200
+  optimizer: FedAvgM
+  learning_rate: 0.1
+  beta_1: 0.95
+
+  participation: selection
+  selection_method: random
+  num_active_clients: 9
+  weight_clients: same
+
+  pretrain_rounds: 0
+  paper_faithful_pretrain: false
+  dht_collection_rounds: 0
+  update_static_info_rounds: 0
+  client_info: ""
+
+dataset_options:
+  name: Spawrious
+  input_size: 224
+  num_targets: 2
+  num_groups: 2
+  norm: true
+  aug_crop: 0
+  aug_horizontal_flip: false
+  num_samples_per_class: null
+
+  # The released README maps the 25-client paper GAI experiment to GAI_2.
+  split_mode: spawrious_GAI_2
+  num_clients: 25
+
+  # The loader keeps the first two backgrounds and dog breeds used by the paper.
+  locations: ['beach', 'snow', 'desert', 'jungle', 'mountain', 'dirt']
+  breeds: ['labrador', 'dachshund', 'bulldog', 'corgi']
+
+checkpoint: null
+wandb: false

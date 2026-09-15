@@ -361,7 +361,7 @@ Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘�
 已完成 GSC/GCI 独立备份、GCI 结果提交与标签冻结，并已从冻结点建立和推送
 `reproduce-spawrious-gai`。后续仅推进 GAI：
 
-1. Spawrious GAI 使用 `split_mode: spawrious_GAI`、25 个客户端、每轮选择
+1. Spawrious GAI 使用 `split_mode: spawrious_GAI_2`、25 个客户端、每轮选择
    9 个客户端；
 2. 论文目标：Random `85.86 ± 2.56`，FedDiverse `87.28 ± 1.61`，平均提升
    `1.42` 个百分点；
