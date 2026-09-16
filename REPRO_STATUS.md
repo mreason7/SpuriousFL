@@ -1,14 +1,16 @@
 # FedDiverse 复现状态
 
-最后更新：2026-09-15
+最后更新：2026-09-16
 
 ## 1. 当前状态
 
-已完成论文中以下三组 Random 与 FedDiverse 三数据 seed 正式实验：
+已完成论文中以下四组 Random 与 FedDiverse 三数据 seed 正式实验：
 
 1. CMNIST GSC：主要数值、方法排序和相对提升均已复现；
 2. Spawrious GSC：FedDiverse 绝对性能接近论文，相对 Random 的优势未复现；
 3. Spawrious GCI：FedDiverse 相对 Random 的平均优势已基本复现。
+4. Spawrious GAI：Random 基线接近论文，但 FedDiverse 的绝对性能和相对优势
+   均未复现。
 
 所有正式实验均使用数据 seed 42、43、44，报告最终模型的 worst-group
 accuracy。表中“本次结果”使用总体标准差，不选择中间最佳 checkpoint。
@@ -18,10 +20,11 @@ accuracy。表中“本次结果”使用总体标准差，不选择中间最佳
 | CMNIST GSC | 91.4942 ± 0.4841 | 94.1505 ± 0.3655 | +2.6563 | 92.00 ± 1.61 | 94.01 ± 0.98 | +2.01 | 基本复现成功 |
 | Spawrious GSC | 87.7497 ± 0.0744 | 87.7497 ± 1.3650 | 0.0000 | 86.27 ± 1.12 | 88.01 ± 0.96 | +1.74 | 绝对值接近，相对优势未复现 |
 | Spawrious GCI | 89.6425 ± 1.5364 | 91.0620 ± 1.4475 | +1.4196 | 87.59 ± 2.00 | 89.91 ± 1.91 | +2.32 | 主要结论基本复现成功 |
+| Spawrious GAI | 86.2250 ± 1.9798 | 84.7003 ± 0.8445 | -1.5247 | 85.86 ± 2.56 | 87.28 ± 1.61 | +1.42 | Random 接近；FedDiverse 及相对优势未复现 |
 
-Spawrious GSC/GCI 的 checkpoint、日志、配置和元数据均已完成本地备份；
-GCI 已冻结。当前阶段是在 `reproduce-spawrious-gai` 分支复现
-**Spawrious GAI**。已完成的数据集不再增加正式运行或选择性补跑。
+Spawrious GSC/GCI/GAI 的 checkpoint、日志、配置和元数据均已完成本地备份；
+GCI 已冻结，GAI 通过标签 `spawrious-gai-official-rng-v1` 冻结。已完成的数据集
+不再增加正式运行或选择性补跑。
 
 ## 2. 仓库、分支与冻结点
 
@@ -30,7 +33,7 @@ GCI 已冻结。当前阶段是在 `reproduce-spawrious-gai` 分支复现
 | CMNIST GSC | `paper-faithful-official-rng` | `e1aeb84`；标签 `cmnist-gsc-official-rng-v1` | 已冻结 |
 | Spawrious GSC | `reproduce-spawrious-gsc` | `a2959a6`；标签 `spawrious-gsc-official-rng-v1` | 已冻结并推送 |
 | Spawrious GCI | `reproduce-spawrious-gci` | `61a6581`；标签 `spawrious-gci-official-rng-v1` | 已冻结并推送 |
-| Spawrious GAI | `reproduce-spawrious-gai` | 起点 `61a6581` | 当前分支，已推送 |
+| Spawrious GAI | `reproduce-spawrious-gai` | 标签 `spawrious-gai-official-rng-v1` | 已完成本地备份并冻结 |
 
 关键实现提交：
 
@@ -40,6 +43,7 @@ GCI 已冻结。当前阶段是在 `reproduce-spawrious-gai` 分支复现
 - `965d5de`：加入 Spawrious GCI 正式配置；
 - `2c250b6`：修复独立 Hydra 检查缺少动态 ConfigStore 注册的问题；
 - `61a6581`：记录 GCI 正式结果并作为 GCI 冻结点。
+- `9ae89e1`：加入 Spawrious GAI 正式配置和复现计划。
 
 仓库位置：
 
@@ -72,9 +76,11 @@ GCI 已冻结。当前阶段是在 `reproduce-spawrious-gai` 分支复现
 - 本地训练：1 epoch；
 - 客户端等权聚合；
 - 服务端：FedAvgM，学习率 0.1，`beta_1: 0.95`；
-- 总客户端数：CMNIST GSC、Spawrious GSC、Spawrious GCI 均为 24；
+- 总客户端数：CMNIST GSC、Spawrious GSC、Spawrious GCI 均为 24，
+  Spawrious GAI 为 25；
 - 每轮选择客户端数：9；
-- 每个客户端训练样本数：200，联邦训练总样本数 4800。
+- CMNIST GSC、Spawrious GSC/GCI 每客户端训练样本数为 200，联邦训练总样本数
+  4800；Spawrious GAI 客户端大小不等，联邦训练总样本数 4600。
 
 ### Random 与 FedDiverse 调度
 
@@ -82,8 +88,8 @@ Random：200 个 Flower round，对应 200 次模型更新，不估计 DHT。
 
 FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 
-1. round 1：24 个客户端进行一次标准 FedAvg 预训练更新；
-2. round 2：24 个客户端只估计并上传 DHT，不更新模型或 FedAvgM 动量；
+1. round 1：所有客户端进行一次标准 FedAvg 预训练更新；
+2. round 2：所有客户端只估计并上传 DHT，不更新模型或 FedAvgM 动量；
 3. round 3-201：每轮由 FedDiverse 选择 9 个客户端，共 199 次更新。
 
 正式 FedDiverse 配置：
@@ -210,6 +216,45 @@ FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 结论：FedDiverse 恢复了论文中的平均方法排序和正向优势，主要结论基本复现。
 seed 42 的负提升作为正式结果保留，不选择性补跑。
 
+### 4.4 Spawrious GAI
+
+配置：
+
+- Random：`conf/spawrious_gai_random.yaml`；
+- FedDiverse：`conf/spawrious_gai_feddiverse_paper.yaml`；
+- 数据划分：`split_mode: spawrious_GAI_2`。
+
+| seed | Random 测试准确率 | Random worst-group | FedDiverse 测试准确率 | FedDiverse worst-group | 提升 |
+|---:|---:|---:|---:|---:|---:|
+| 42 | 93.3360 | 87.8549 | 92.2319 | 84.5426 | -3.3123 |
+| 43 | 92.5079 | 83.4385 | 92.9416 | 85.8044 | +2.3659 |
+| 44 | 93.2571 | 87.3817 | 92.6656 | 83.7539 | -3.6278 |
+| 均值 | 93.0336 | 86.2250 | 92.6130 | 84.7003 | -1.5247 |
+
+总体标准差：Random `1.9798`，FedDiverse `0.8445`。本次 Random 比论文高
+`0.3650`，FedDiverse 比论文低 `2.5797`；本次平均提升比论文低 `2.9447`。
+
+正式 checkpoint：
+
+| 方法 | seed 42 | seed 43 | seed 44 |
+|---|---|---|---|
+| Random | `20260915-081441/final` | `20260915-090238/final` | `20260915-095113/final` |
+| FedDiverse | `20260916-020015/final` | `20260916-025153/final` | `20260916-034207/final` |
+
+产物：
+
+- Random：`logs/spawrious_gai/random_official_rng/`；
+- FedDiverse：`logs/spawrious_gai/predicted_official_rng/`；
+- 最终对照：`results/spawrious_gai_official_rng_final_comparison.csv`；
+- 本地完整备份：
+  `checkpoints/local_backup/spawrious_gai_official_rng_v1/`，包含 6 个
+  checkpoint、两组日志及总结、正式配置、最终对照、模型哈希和元数据。
+
+结论：六次正式运行的配置、数据、调度和服务器产物检查均通过。Random 基线
+接近论文，但 FedDiverse 的绝对性能与相对优势均未复现；三 seed 平均相对
+Random 下降 `1.5247` 个百分点。seed 43 的正提升与 seed 42/44 的负提升均按
+正式结果保留，不选择性补跑或选择中间 checkpoint。
+
 ## 5. 数据与完整性审计
 
 ### CMNIST
@@ -229,6 +274,9 @@ seed 42 的负提升作为正式结果保留，不选择性补跑。
 - 使用 beach、snow 两个背景与 labrador、dachshund 两个犬种；
 - train 22,808，validation 2,536，test 2,536；
 - GSC/GCI 均为 24 个客户端，每客户端 200 个样本，共 4800。
+- GAI 使用 `spawrious_GAI_2`，共 25 个客户端，客户端大小不等，联邦训练总计
+  4600；群体 `[y0g0,y0g1,y1g0,y1g1]` 为 `[2000,500,2000,100]`，客户端
+  分片之间无重叠。
 
 每次正式 FedDiverse 运行必须满足：
 
@@ -347,7 +395,19 @@ GCI 的 Random 和 FedDiverse 均高于论文绝对值；FedDiverse 平均提高
 为明显正提升。该结果说明 GSC 上没有平均提升不是当前实现对所有 Spawrious
 划分都失效的系统性证据。
 
-### 6.10 Ray 启动与 GitHub 网络问题
+### 6.10 Spawrious GAI 的 FedDiverse 优势未复现
+
+GAI 六次正式运行均通过配置、数据、退出码、DHT-only 调度和服务器产物检查。
+Random 达到 `86.2250 ± 1.9798`，与论文的 `85.86 ± 2.56` 接近；FedDiverse
+仅为 `84.7003 ± 0.8445`，比论文低 `2.5797` 个百分点。FedDiverse 相对
+Random 的平均差值为 `-1.5247`，与论文的 `+1.42` 方法排序相反。
+
+逐 seed 差值分别为 `-3.3123`、`+2.3659`、`-3.6278`。由于正式协议只固定
+数据划分 seed，不能把逐 seed 差值解释为严格配对效应，但三次均值已经足以判定
+论文报告的 GAI 平均优势未在本次 official-unseeded 复现中恢复。所有结果均按
+最终 checkpoint 保留，不增加选择性补跑。
+
+### 6.11 Ray 启动与 GitHub 网络问题
 
 Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘、内存和
 `/dev/shm` 充足后，清理旧 Ray 会话、关闭 Dashboard，并把 object store
@@ -358,24 +418,18 @@ Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘�
 
 ## 7. 后续工作与边界
 
-已完成 GSC/GCI 独立备份、GCI 结果提交与标签冻结，并已从冻结点建立和推送
-`reproduce-spawrious-gai`。后续仅推进 GAI：
+CMNIST GSC、Spawrious GSC/GCI/GAI 的正式运行、本地备份、结果记录与冻结均已
+完成。后续不增加正式运行、选择性补跑或中间 checkpoint 筛选。
 
-1. Spawrious GAI 使用 `split_mode: spawrious_GAI_2`、25 个客户端、每轮选择
-   9 个客户端；
-2. 论文目标：Random `85.86 ± 2.56`，FedDiverse `87.28 ± 1.61`，平均提升
-   `1.42` 个百分点；
-3. 按配置解析、数据审计、Random smoke、FedDiverse smoke、Random 三 seed、
-   FedDiverse 三 seed、总结与冻结的顺序执行；
-4. 自研阶段另建分支并采用完整受控播种协议，在同一协议下重跑所有基线，不与
-   本文档中的 official-unseeded 论文复现结果混用。
+自研阶段另建分支并采用完整受控播种协议，在同一协议下重跑所有基线，不与
+本文档中的 official-unseeded 论文复现结果混用。
 
 ## 8. 新会话提示词
 
 请先阅读 `REPRO_STATUS.md` 并检查 Git 状态。已完成 CMNIST GSC、Spawrious
-GSC 和 Spawrious GCI 的 Random/FedDiverse 三数据 seed 正式实验。CMNIST
-基本复现成功；Spawrious GSC 的 FedDiverse 绝对性能接近论文但相对优势未
-复现；Spawrious GCI 恢复了 `+1.4196` 个百分点的平均优势。不要继续补跑上述
-数据集或选择最佳 checkpoint。GSC/GCI 完整产物已经分别备份，GCI 已在
-`61a6581` 通过标签 `spawrious-gci-official-rng-v1` 冻结。当前位于
-`reproduce-spawrious-gai`，下一步复现 Spawrious GAI。
+GSC、GCI 和 GAI 的 Random/FedDiverse 三数据 seed 正式实验。CMNIST 基本
+复现成功；Spawrious GSC 的相对优势未复现；Spawrious GCI 恢复了 `+1.4196`
+个百分点的平均优势；Spawrious GAI 的 FedDiverse 平均比 Random 低 `1.5247`
+个百分点，论文优势未复现。不要继续补跑或选择最佳 checkpoint。GSC/GCI 已
+完成独立备份。GAI 本地完整备份也已完成，并通过标签
+`spawrious-gai-official-rng-v1` 冻结；不要继续补跑或选择最佳 checkpoint。
