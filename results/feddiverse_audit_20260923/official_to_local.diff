@@ -1,0 +1,210 @@
+diff --git a/conf/server_opt/all_defaults.yaml b/conf/server_opt/all_defaults.yaml
+index cd7d141..4a18770 100644
+--- a/conf/server_opt/all_defaults.yaml
++++ b/conf/server_opt/all_defaults.yaml
+@@ -7,6 +7,8 @@ weight_clients: same
+ weight_list: []
+ rounds: 200
+ pretrain_rounds: 1
++paper_faithful_pretrain: false
++dht_collection_rounds: 0
+ participation: selection
+ client_info: groupweights_triplets
+ selection_method: random
+@@ -16,4 +18,4 @@ update_static_info_rounds: 0
+ num_active_clients: 9
+ multiclass: true
+ afed_generator: false
+-fairfed_beta: 0.1
+\ No newline at end of file
++fairfed_beta: 0.1
+diff --git a/flower_train.py b/flower_train.py
+index 69c989b..e37d015 100644
+--- a/flower_train.py
++++ b/flower_train.py
+@@ -37,8 +37,10 @@ global val_ds
+ # TODO: I don't know how to pass parameters to this function
+ def client_fn(cid: str) -> fl.client.Client:
+     """Prepare flower client from ID (following flower documentation)"""
+-    client = FlowerClient(int(cid), conf)
+-    client_train_ds = ds_split[int(cid)]
++    client_id = int(cid)
++
++    client = FlowerClient(client_id, conf)
++    client_train_ds = ds_split[client_id]
+     client_train_ds = data_preparation.preprocess_data(client_train_ds, conf, shuffle=True)
+     # client_train_ds = data_preparation.get_ds_from_np((X_split[int(cid)], Y_split[int(cid)]))
+     client.load_data(client_train_ds, val_ds)
+diff --git a/src/config_params.py b/src/config_params.py
+index bdf6ad8..4519b39 100644
+--- a/src/config_params.py
++++ b/src/config_params.py
+@@ -47,6 +47,8 @@ class ServerOptConfig:
+     selection_method: str
+     weight_list: Optional[List]
+     pretrain_rounds: Optional[int]
++    paper_faithful_pretrain: bool
++    dht_collection_rounds: int
+     num_active_clients: Optional[int]
+     fedpns_alpha: float
+     fedpns_beta: float
+diff --git a/src/flower_client.py b/src/flower_client.py
+index 2e75825..892875e 100644
+--- a/src/flower_client.py
++++ b/src/flower_client.py
+@@ -57,6 +57,17 @@ class FlowerClient(fl.client.NumPyClient):
+             self.set_parameters(weights, config)
+             shared_metrics = {"cid": self.cid, "datasize":self.train_len}
+             train_ds = self.train_data
++
++            # In the paper-faithful flow, the server sends the already
++            # pre-trained global model in a dedicated metadata-only round.
++            # Estimate the DHT without performing or returning a model update.
++            if config.get("metadata_only", False):
++                shared_metrics = self.share_client_params_once(
++                    None, shared_metrics, before_train=True
++                )
++                shared_metrics["loss"] = 0.0
++                return model_utils.get_weights(self.model), 1, shared_metrics
++
+             opt = subpopbench.get_subpop_optimizer(self.model, train_ds.dataset, self.conf)
+             # Update client info, eg N matrix with model params from server
+             if config["update_info"]:
+@@ -395,4 +406,4 @@ class FlowerClient(fl.client.NumPyClient):
+         m_pred = matrix_to_list(est_int_matrix.cpu().numpy())
+         log_msg = "True: " + str(m_true) + " Pred: " + str(m_pred)
+         log(INFO, log_msg)
+-        return est_int_matrix.cpu().numpy()
+\ No newline at end of file
++        return est_int_matrix.cpu().numpy()
+diff --git a/src/flower_strategy.py b/src/flower_strategy.py
+index 86e599a..8fb5d57 100644
+--- a/src/flower_strategy.py
++++ b/src/flower_strategy.py
+@@ -128,6 +128,30 @@ class MyStrategy(fl.server.strategy.FedOpt):
+                          tau=tau,
+                          *args, **kwargs)
+ 
++    def paper_faithful_pretrain_enabled(self):
++        """Whether to separate FedAvg pre-training and DHT collection."""
++        return self.conf["server_opt"].get("paper_faithful_pretrain", False)
++
++    def pretrain_round_count(self):
++        """Number of model-update rounds before DHT estimation."""
++        return int(self.conf["server_opt"].get("pretrain_rounds") or 0)
++
++    def dht_collection_round_count(self):
++        """Number of metadata-only rounds immediately after pre-training."""
++        return int(self.conf["server_opt"].get("dht_collection_rounds") or 0)
++
++    def is_dht_collection_round(self, server_round):
++        """Return True for rounds that collect DHTs without model updates."""
++        if not self.paper_faithful_pretrain_enabled():
++            return False
++        pretrain_end = self.pretrain_round_count()
++        collection_end = pretrain_end + self.dht_collection_round_count()
++        return pretrain_end < server_round <= collection_end
++
++    def selection_start_round(self):
++        """First round in which paper-faithful client selection is active."""
++        return self.pretrain_round_count() + self.dht_collection_round_count() + 1
++
+     def aggregate_fit(
+             self,
+             server_round,
+@@ -161,6 +185,14 @@ class MyStrategy(fl.server.strategy.FedOpt):
+         # Calculate round interaction matrix (data from cache)
+         self.track_group_dist(results)
+ 
++        # A metadata-only round distributes the pre-trained global model and
++        # stores client DHTs. It must not aggregate client parameters or alter
++        # the FedAvgM momentum state.
++        if self.is_dht_collection_round(server_round):
++            self.log_client_weights(results)
++            log(INFO, "DHT collection round %s completed without a model update", server_round)
++            return ndarrays_to_parameters(self.current_weights), metrics_aggregated
++
+         # Calculate client weights with post-training methods
+         if self.conf["server_opt"]["weight_clients"].startswith("server_post_"):
+             results = self.post_calculate_weights(results, server_round=server_round)
+@@ -191,6 +223,15 @@ class MyStrategy(fl.server.strategy.FedOpt):
+ 
+         fedavg_weights_aggregate = parameters_to_ndarrays(fedavg_parameters_aggregated)
+ 
++        # The paper specifies standard FedAvg for the global pre-training
++        # phase, even when the subsequent federation uses FedAvgM.
++        if (
++            self.paper_faithful_pretrain_enabled()
++            and server_round <= self.pretrain_round_count()
++        ):
++            self.current_weights = fedavg_weights_aggregate
++            return ndarrays_to_parameters(self.current_weights), metrics_aggregated
++
+         if self.conf["server_opt"]["optimizer"]=="FedAvg":
+             self.current_weights = fedavg_weights_aggregate
+             return ndarrays_to_parameters(self.current_weights), metrics_aggregated
+@@ -298,7 +339,16 @@ class MyStrategy(fl.server.strategy.FedOpt):
+         sample_size, min_num_clients = self.num_fit_clients(
+             client_manager.num_available()
+         )
+-        if "pretrain_rounds" in self.conf["server_opt"].keys() and server_round>self.conf["server_opt"]["pretrain_rounds"]:
++
++        if self.paper_faithful_pretrain_enabled():
++            selection_active = server_round >= self.selection_start_round()
++        else:
++            selection_active = (
++                "pretrain_rounds" in self.conf["server_opt"].keys()
++                and server_round > self.conf["server_opt"]["pretrain_rounds"]
++            )
++
++        if selection_active:
+             if self.conf["server_opt"]["participation"] == "selection":
+                 if "num_active_clients" in self.conf["server_opt"] and isinstance(self.conf["server_opt"]["num_active_clients"],int):
+                     active_clients = self.conf["server_opt"]["num_active_clients"]
+@@ -317,6 +367,16 @@ class MyStrategy(fl.server.strategy.FedOpt):
+             client_config = copy.deepcopy(self.shared_copt_params)     # {}
+             client_config["round"] = server_round
+ 
++            if self.paper_faithful_pretrain_enabled():
++                metadata_only = self.is_dht_collection_round(server_round)
++                client_config["metadata_only"] = metadata_only
++                client_config["update_info"] = metadata_only
++                if metadata_only:
++                    self.client_update_requested.append(int(client.cid))
++                fit_configurations.append((client, FitIns(parameters, client_config)))
++                del client_config
++                continue
++
+             if "pretrain_rounds" in self.conf["server_opt"].keys() and server_round<self.conf["server_opt"]["pretrain_rounds"]:
+                 client_config["update_info"] = False
+             else:
+@@ -657,4 +717,3 @@ class MyStrategy(fl.server.strategy.FedOpt):
+             n_matrix[k] = v/total
+         self.round_interaction_matrix = n_matrix
+         print("Round Interaction matrix:", n_matrix)
+-        
+\ No newline at end of file
+diff --git a/src/utils.py b/src/utils.py
+index 14cae7c..5fa7c57 100644
+--- a/src/utils.py
++++ b/src/utils.py
+@@ -45,6 +45,12 @@ def set_seed(random_seed):
+     random.seed(random_seed)
+     np.random.seed(random_seed)
+     torch.manual_seed(random_seed)
++    if torch.cuda.is_available():
++        torch.cuda.manual_seed(random_seed)
++        torch.cuda.manual_seed_all(random_seed)
++
++    torch.backends.cudnn.benchmark = False
++    torch.backends.cudnn.deterministic = True
+ 
+ 
+ def save_config(conf, path):
+@@ -368,4 +374,4 @@ def dict_to_list(data_dict: dict, prefix: str) -> list:
+     for index, value in indexed_items:
+         result_list[index] = value
+ 
+-    return result_list
+\ No newline at end of file
++    return result_list

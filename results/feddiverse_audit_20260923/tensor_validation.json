@@ -1,0 +1,78 @@
+[
+  {
+    "K": 24,
+    "C": 2,
+    "N_shape": [
+      24,
+      2,
+      2
+    ],
+    "DHT_shape": [
+      3,
+      24
+    ],
+    "passed": true
+  },
+  {
+    "K": 25,
+    "C": 2,
+    "N_shape": [
+      25,
+      2,
+      2
+    ],
+    "DHT_shape": [
+      3,
+      25
+    ],
+    "passed": true
+  },
+  {
+    "K": 25,
+    "C": 4,
+    "N_shape": [
+      25,
+      4,
+      2
+    ],
+    "DHT_shape": [
+      3,
+      25
+    ],
+    "passed": true
+  },
+  {
+    "K": 100,
+    "C": 2,
+    "N_shape": [
+      100,
+      2,
+      2
+    ],
+    "DHT_shape": [
+      3,
+      100
+    ],
+    "passed": true
+  },
+  {
+    "cross_product": "einsum equals numpy.cross",
+    "selector_random_non_degenerate_cases": 60,
+    "passed": true
+  },
+  {
+    "pivot_counterexample_counts": [
+      [
+        90,
+        10
+      ],
+      [
+        50,
+        50
+      ]
+    ],
+    "code_choice": 0,
+    "paper_choice": 1,
+    "passed": true
+  }
+]

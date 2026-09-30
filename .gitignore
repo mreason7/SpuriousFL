@@ -7,3 +7,6 @@ env.yaml
 /checkpoints/
 outputs
 multirun
+
+# Locally rendered paper pages used for visual audit; regenerate from the source PDF.
+/results/feddiverse_audit_20260923/*.png
