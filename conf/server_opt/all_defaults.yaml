@@ -19,3 +19,6 @@ num_active_clients: 9
 multiclass: true
 afed_generator: false
 fairfed_beta: 0.1
+pivot_mode: legacy
+client_id_mapping: legacy
+selector_mode: legacy

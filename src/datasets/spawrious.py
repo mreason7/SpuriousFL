@@ -21,12 +21,13 @@ class Spawrious(VisionDataset, SubpopDataset):
         num_groups = 6,
         num_samples_per_class = None,
         locations=None,
-        breeds=None
+        breeds=None,
+        stable_order=False,
     ) -> None:
         dataset, locations, breeds = get_dataset(root_dir=root, train=train,
                                                  num_targets=num_targets, num_groups=num_groups,
                                                  num_samples_per_class=num_samples_per_class,
-                                                 locations=locations,breeds=breeds)
+                                                 locations=locations,breeds=breeds,stable_order=stable_order)
         self.metadata = {"locations":locations, "breeds":breeds}
         self.subset = dataset[["path","breed","location"]].to_numpy()
         self.root = root
@@ -48,17 +49,18 @@ class Spawrious(VisionDataset, SubpopDataset):
             raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
 
 
-def get_image_info(root):
+def get_image_info(root, stable_order=False):
     image_info_list = []
 
     # Traverse the directory structure
-    for location in os.listdir(root):
+    ordered = sorted if stable_order else lambda values: values
+    for location in ordered(os.listdir(root)):
         location_path = os.path.join(root, location)
         if os.path.isdir(location_path):
-            for breed in os.listdir(location_path):
+            for breed in ordered(os.listdir(location_path)):
                 breed_path = os.path.join(location_path, breed)
                 if os.path.isdir(breed_path):
-                    for filename in os.listdir(breed_path):
+                    for filename in ordered(os.listdir(breed_path)):
                         if filename.endswith('.png'):
                             image_path = os.path.join(breed_path, filename)
                             image_info_list.append((image_path, location, breed))
@@ -66,10 +68,10 @@ def get_image_info(root):
     return image_info_list
 
 
-def get_dataset(root_dir, train=True, test_ratio=0.1, seed=0, num_targets=4, num_groups=6, num_samples_per_class=None, locations=None, breeds=None):
+def get_dataset(root_dir, train=True, test_ratio=0.1, seed=0, num_targets=4, num_groups=6, num_samples_per_class=None, locations=None, breeds=None, stable_order=False):
     _download_dataset_if_not_available("entire_dataset", root_dir)
-    metadata1 = get_image_info(os.path.join(root_dir,"spawrious224","1"))
-    metadata0 = get_image_info(os.path.join(root_dir,"spawrious224","0"))
+    metadata1 = get_image_info(os.path.join(root_dir,"spawrious224","1"), stable_order=stable_order)
+    metadata0 = get_image_info(os.path.join(root_dir,"spawrious224","0"), stable_order=stable_order)
     metadata = metadata0 + metadata1
     df = pd.DataFrame(metadata, columns=["path","location","breed"])
     # Convert location and breed columns to categorical with predefined order

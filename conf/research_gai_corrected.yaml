@@ -1,0 +1,7 @@
+defaults:
+  - research_gai_base
+  - _self_
+server_opt:
+  pivot_mode: min_count_gap
+  client_id_mapping: candidate
+  selector_mode: guarded

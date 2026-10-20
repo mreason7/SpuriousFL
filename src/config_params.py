@@ -56,6 +56,9 @@ class ServerOptConfig:
     multiclass: bool
     afed_generator: bool
     fairfed_beta:float
+    pivot_mode: str = "legacy"
+    client_id_mapping: str = "legacy"
+    selector_mode: str = "legacy"
 
 @dataclass
 class FairnessConfig:
@@ -114,3 +117,4 @@ class Config:
     dataset_options: DatasetConfig
     checkpoint: Optional[str]
     machine: Optional[EnvironmentConfig]
+    research: Optional[dict] = None

@@ -10,6 +10,7 @@ from src.optimizers.weighting_strategy import HCSFed, client_weights_fairfed, cl
 from src.utils import log
 from logging import ERROR, INFO, DEBUG
 from logging import WARNING
+from src.baseline_validation import guarded_selection, map_positions, record_selection, rng_scope, enabled as research_enabled
 
 class MyManager(fl.server.SimpleClientManager):
     """Provides a pool of available clients."""
@@ -23,6 +24,16 @@ class MyManager(fl.server.SimpleClientManager):
         self.clusters = None
 
     def sample(
+        self, num_clients, client_info=None, min_num_clients=None,
+        criterion=None, evaluate=False, server_round=None
+    ):
+        # Server selection randomness is independent from worker/local training.
+        with rng_scope(self.conf, "evaluate-selection" if evaluate else "selection",
+                       server_round, use_torch=False):
+            return self._sample_impl(num_clients, client_info, min_num_clients,
+                                     criterion, evaluate, server_round)
+
+    def _sample_impl(
         self,
         num_clients: int,
         client_info:Optional[dict] = None, 
@@ -38,6 +49,8 @@ class MyManager(fl.server.SimpleClientManager):
         self.wait_for(min_num_clients)
         # Sample clients which meet the criterion
         available_cids = list(self.clients)
+        if research_enabled(self.conf):
+            available_cids.sort(key=int)
         if criterion is not None:
             available_cids = [
                 cid for cid in available_cids if criterion.select(self.clients[cid])
@@ -88,8 +101,16 @@ class MyManager(fl.server.SimpleClientManager):
         elif self.conf["server_opt"]["selection_method"].startswith("triplets_stochasticmatrix"):
             metric_list = [client_info[int(cid)] for cid in available_cids]
             M = np.array([[a['SC'],a['AI'],a['CI']] for a in metric_list])
-            selected_clients = select_noreplacement(M.T, num_clients)
-            sampled_cids = [str(cid) for cid in selected_clients]
+            mode = self.conf["server_opt"].get("selector_mode", "legacy")
+            if mode == "guarded":
+                selected_clients = guarded_selection(M.T, num_clients)
+            elif mode == "legacy":
+                selected_clients = select_noreplacement(M.T, num_clients)
+            else:
+                raise ValueError(f"Unknown selector mode: {mode}")
+            sampled_cids = map_positions(selected_clients, available_cids,
+                                        self.conf["server_opt"].get("client_id_mapping", "legacy"))
+            record_selection(self.conf, server_round, available_cids, selected_clients, sampled_cids)
         elif self.conf["server_opt"]["selection_method"] == "roundrobin":
             sampled_ids = []
             zero_indices = np.where(self.past_sampled_ids == 0)[0]

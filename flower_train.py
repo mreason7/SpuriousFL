@@ -7,6 +7,7 @@ from flwr.common import ndarrays_to_parameters
 import os
 import pandas as pd
 import json
+import hashlib
 import hydra
 from hydra.core.config_store import ConfigStore
 from hydra.core.hydra_config import HydraConfig
@@ -25,6 +26,7 @@ from src.flower_manager import MyManager
 from src.models import model_utils
 from src.flower_strategy import MyStrategy
 from src.flower_client import FlowerClient
+from src import baseline_validation
 
 
 
@@ -58,6 +60,9 @@ def train(conf, conf_name):
     utils.save_config(conf, os.path.join("checkpoints/", conf["exp_id"], "config.yaml"))
 
     train_ds, val_ds, test_ds = data_preparation.load_data(conf=conf)
+    if baseline_validation.enabled(conf):
+        train_ds, val_ds = baseline_validation.validation_split(train_ds, conf)
+    validation_dataset = val_ds
     val_ds = data_preparation.preprocess_data(val_ds, conf, shuffle=False)
     # X_val, Y_val = data_preparation.get_np_from_ds(val_ds)
     # X_train, Y_train = data_preparation.get_np_from_ds(train_ds)
@@ -65,6 +70,9 @@ def train(conf, conf_name):
         train_ds,
         conf
     )
+    if baseline_validation.enabled(conf):
+        digest = baseline_validation.save_manifest(conf, ds_split, validation_dataset, test_ds)
+        print("Research data manifest SHA256:", digest)
 
     total_length = sum([len(ds) for ds in ds_split[:conf["dataset_options"]["num_clients"]]])
 
@@ -95,6 +103,13 @@ def train(conf, conf_name):
 
     model_utils.print_summary(initial_model)
     ws = model_utils.get_weights(initial_model)
+    if baseline_validation.enabled(conf):
+        initial_hash = hashlib.sha256()
+        for array in ws:
+            initial_hash.update(str((array.shape, str(array.dtype))).encode())
+            initial_hash.update(array.tobytes())
+        with open(os.path.join("checkpoints", conf["exp_id"], "initial_weights.sha256"), "w") as stream:
+            stream.write(initial_hash.hexdigest() + "\n")
     initial_parameters = ndarrays_to_parameters(
         ws
     )
@@ -150,6 +165,21 @@ def train(conf, conf_name):
         "final"
     )
     model = model_utils.init_model(conf=conf, model_path=model_path)
+    if baseline_validation.enabled(conf):
+        # Per-round client evaluation uses independent validation data.
+        # Test data is evaluated once, after the final checkpoint is fixed.
+        from src.optimizers import optim_utils
+        _, validation_accuracy, validation_groups = optim_utils.evaluate(model, val_ds, conf)
+        with open(os.path.join("checkpoints", conf["exp_id"], "final_validation_metrics.json"), "w") as stream:
+            json.dump({"validation_accuracy": validation_accuracy, **validation_groups}, stream, indent=2)
+        test_loader = data_preparation.preprocess_data(test_ds, conf, shuffle=False)
+        loss, accuracy, groups = optim_utils.evaluate(model, test_loader, conf)
+        final_metrics = {"test_accuracy": accuracy, **groups,
+                         "test_loss_legacy_normalization": loss,
+                         "note": "Fixed-final-checkpoint test; loss retains legacy normalization."}
+        with open(os.path.join("checkpoints", conf["exp_id"], "final_test_metrics.json"), "w") as stream:
+            json.dump(final_metrics, stream, indent=2)
+        print("FINAL_TEST_METRICS", json.dumps(final_metrics))
     return model
 
 
@@ -164,6 +194,7 @@ def main(cfg: Config):
     hydra_cfg = HydraConfig.get()
     conf_name = hydra_cfg.job.config_name
     conf = OmegaConf.to_container(cfg, resolve=True)
+    baseline_validation.seed_driver(conf)
     base_start_date = datetime.now()
     # Get the current run number from Hydra and add it as seconds
     try:

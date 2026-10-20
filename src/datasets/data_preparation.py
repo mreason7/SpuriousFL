@@ -7,6 +7,7 @@ from src.datasets.utkface import UTKFace, data_transforms_utkface, split_data_ut
 import torch
 import copy
 import numpy as np
+from src.baseline_validation import enabled as research_enabled
 
 from src.datasets.cifar import CIFAR10, data_transforms_cifar10, cifar_split_data
 from src.datasets.waterbrids import WaterBirds, data_transforms_waterbirds, split_data_waterbirds
@@ -76,6 +77,7 @@ def load_data(dataset_mode="CIFAR10", val_split=False, val_ratio=0.2, conf={}):
             num_groups=ds_opt['num_groups'],
             num_targets=ds_opt['num_targets'],
             num_samples_per_class=ds_opt['num_samples_per_class'],
+            stable_order=research_enabled(conf),
             locations=locations,
             breeds=breeds
         )
@@ -84,7 +86,8 @@ def load_data(dataset_mode="CIFAR10", val_split=False, val_ratio=0.2, conf={}):
             num_groups=ds_opt['num_groups'],
             num_targets=ds_opt['num_targets'],
             locations=locations,
-            breeds=breeds
+            breeds=breeds,
+            stable_order=research_enabled(conf),
         )
         valset = copy.deepcopy(testset)
         return trainset, valset, testset

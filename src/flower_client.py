@@ -18,6 +18,7 @@ from src.optimizers import subpopbench
 from src.optimizers import optim_utils
 import copy
 import torch
+from src.baseline_validation import choose_pivot, rng_scope, enabled as research_enabled
 
 class FlowerClient(fl.client.NumPyClient):
     """Client implementation using Flower federated learning framework"""
@@ -50,6 +51,10 @@ class FlowerClient(fl.client.NumPyClient):
         model_utils.set_weights(self.model, weights)
 
     def fit(self, weights, config):
+        with rng_scope(self.conf, "fit", int(config.get("round", 0)), int(self.cid)):
+            return self._fit_impl(weights, config)
+
+    def _fit_impl(self, weights, config):
         """Flower fit passing updated weights, data size and additional params in a dict"""
         # return self.get_parameters(config), 1, {"cid": self.cid, "loss":-1}
         try:
@@ -374,7 +379,12 @@ class FlowerClient(fl.client.NumPyClient):
         # ==============================================
         #log(INFO, "Train Left-Right classifier")
 
-        train_idx = min(splits, key=lambda k: splits[k][2])
+        train_idx = choose_pivot(splits, self.conf["server_opt"].get("pivot_mode", "legacy"))
+        if research_enabled(self.conf):
+            log(INFO, "DHT pivot cid=%s mode=%s class=%s pseudo_counts=%s", self.cid,
+                self.conf["server_opt"].get("pivot_mode", "legacy"), int(train_idx),
+                {int(k): [int((v[0].tensors[1] == j).sum()) for j in (0, 1)]
+                 for k, v in splits.items()})
         lr_split, weights, _ = splits[train_idx]
         lr_loader = iter(
             InfiniteDataLoader(

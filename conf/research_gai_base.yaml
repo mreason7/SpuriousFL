@@ -1,0 +1,28 @@
+defaults:
+  - spawrious_gai_feddiverse_paper
+  - _self_
+
+# NEW protocol, not directly comparable to frozen official-unseeded numbers.
+# All arms share sorted filenames, independent validation data, initialization,
+# round/client RNG derivation, update budgets and legacy DHT step semantics.
+research:
+  enabled: true
+  training_seed: 142
+  validation_seed: 1042
+  validation_fraction: 0.1
+  run_tag: baseline-validation
+
+server_opt:
+  pivot_mode: legacy
+  client_id_mapping: legacy
+  selector_mode: legacy
+
+client_opt:
+  num_workers: 0
+
+machine:
+  ray_init_args:
+    include_dashboard: false
+    object_store_memory: 4294967296
+
+wandb: false

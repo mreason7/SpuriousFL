@@ -31,6 +31,7 @@ from src.optimizers.weighting_strategy import apply_smoothing, apply_softmax, cl
 from src.utils import log
 from src.models import model_utils
 import json
+from src.baseline_validation import enabled as research_enabled
 
 
 def fit_metrics_aggregation_fn(fit_metrics):
@@ -159,6 +160,11 @@ class MyStrategy(fl.server.strategy.FedOpt):
             failures,
     ):
         """Aggregate fit results using weighted average."""
+        if research_enabled(self.conf) and (failures or len(results) != self.expected_fit_clients):
+            raise RuntimeError("Controlled baseline round has failed/missing client results")
+        if research_enabled(self.conf):
+            # Fix floating-point reduction order independently of Ray completion.
+            results = sorted(results, key=lambda item: int(item[1].metrics["cid"]))
         if not results:
             return None, {}
         # Do not aggregate if there are failures and failures are not accepted
@@ -298,6 +304,8 @@ class MyStrategy(fl.server.strategy.FedOpt):
             failures,
     ):
         """Save final model"""
+        if research_enabled(self.conf) and (failures or not results):
+            raise RuntimeError("Controlled baseline evaluation has failed/missing results")
         aggregated_result = super().aggregate_evaluate(rnd, results, failures)
         if rnd == self.conf["server_opt"]["rounds"]:
             # end of training calls
@@ -358,6 +366,9 @@ class MyStrategy(fl.server.strategy.FedOpt):
         clients = client_manager.sample(
             num_clients=sample_size, min_num_clients=min_num_clients, client_info=self.stored_client_data, server_round=server_round
         )
+        self.expected_fit_clients = sample_size
+        if research_enabled(self.conf) and len(clients) != sample_size:
+            raise RuntimeError("Controlled baseline selected an incorrect number of clients")
 
         # Create custom configs
         fit_configurations = []
