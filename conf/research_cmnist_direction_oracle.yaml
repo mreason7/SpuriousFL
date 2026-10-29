@@ -1,0 +1,9 @@
+defaults:
+  - research_cmnist_base
+  - _self_
+
+server_opt:
+  selection_method: joint_direction_oracle
+  client_info: joint_oracle
+  joint_target: [[0.25, 0.25], [0.25, 0.25]]
+  joint_max_swaps: 100

@@ -59,6 +59,8 @@ class ServerOptConfig:
     pivot_mode: str = "legacy"
     client_id_mapping: str = "legacy"
     selector_mode: str = "legacy"
+    joint_target: Optional[List[List[float]]] = None
+    joint_max_swaps: int = 100
 
 @dataclass
 class FairnessConfig:

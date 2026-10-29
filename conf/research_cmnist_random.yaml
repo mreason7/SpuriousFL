@@ -1,0 +1,7 @@
+defaults:
+  - research_cmnist_base
+  - _self_
+
+server_opt:
+  selection_method: random
+  client_info: joint_oracle

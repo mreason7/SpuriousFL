@@ -1,0 +1,25 @@
+defaults:
+  - cmnist_feddiverse_paper
+  - _self_
+
+research:
+  enabled: true
+  training_seed: 142
+  validation_seed: 1042
+  validation_fraction: 0.1
+  run_tag: cmnist-direction-oracle
+
+server_opt:
+  client_info: triplets
+  client_id_mapping: candidate
+  selector_mode: guarded
+
+client_opt:
+  num_workers: 0
+
+machine:
+  ray_init_args:
+    include_dashboard: false
+    object_store_memory: 4294967296
+
+wandb: false

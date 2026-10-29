@@ -11,6 +11,7 @@ from src.utils import log
 from logging import ERROR, INFO, DEBUG
 from logging import WARNING
 from src.baseline_validation import guarded_selection, map_positions, record_selection, rng_scope, enabled as research_enabled
+from src.direction_selection import select_joint, record_joint_selection
 
 class MyManager(fl.server.SimpleClientManager):
     """Provides a pool of available clients."""
@@ -73,6 +74,23 @@ class MyManager(fl.server.SimpleClientManager):
 
         if self.conf["server_opt"]["selection_method"] == "random":
             sampled_cids = random.sample(available_cids, num_clients)
+        elif self.conf["server_opt"]["selection_method"] == "joint_direction_oracle":
+            options = self.conf["server_opt"]
+            if not research_enabled(self.conf) or options["weight_clients"] != "same":
+                raise ValueError("Oracle joint selection requires research mode and equal aggregation")
+            if "Npredicted" in options["client_info"]:
+                raise ValueError("Oracle joint selection must not be labelled as predicted")
+            labels = self.conf["dataset_options"]["num_targets"]
+            groups = self.conf["dataset_options"]["num_groups"]
+            # Existing interaction_matrix_* fields are TRUE row-major counts.
+            counts = np.array([[client_info[int(cid)][f"interaction_matrix_{j}"]
+                                for j in range(labels * groups)] for cid in available_cids])
+            counts = counts.reshape(len(available_cids), labels, groups)
+            selected_clients, diagnostics = select_joint(
+                counts, num_clients, options.get("joint_target"), options.get("joint_max_swaps", 100))
+            sampled_cids = map_positions(selected_clients, available_cids, "candidate")
+            record_selection(self.conf, server_round, available_cids, selected_clients, sampled_cids)
+            record_joint_selection(self.conf, server_round, available_cids, selected_clients, diagnostics)
         elif self.conf["server_opt"]["selection_method"] == "fairfed":
             metric_list = [client_info[int(cid)] for cid in available_cids]
             if self.client_omega is None:
