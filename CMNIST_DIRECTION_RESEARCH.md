@@ -1,5 +1,7 @@
 # CMNIST：真实联合矩阵与方向感知选择
 
+原九次运行结果及后续步骤见 `CMNIST_NEXT_STEPS.md`。先分析选择频率，勿重复运行本文件中的首批正式命令。
+
 分支：`research/cmnist-direction-aware-oracle`。基于已有 `baseline-validation-v1`
 的受控协议实现；不修改已冻结的 official-unseeded 实验。
 
