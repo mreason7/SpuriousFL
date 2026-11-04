@@ -1,10 +1,20 @@
 # FedDiverse 复现状态
 
-最后更新：2026-09-16
+最后更新：2026-11-04（依据近期聊天记录与本地文件核对）
 
 ## 1. 当前状态
 
-已完成论文中以下四组 Random 与 FedDiverse 三数据 seed 正式实验：
+当前优先事项是**依据作者回复，在新分支重训 Spawrious GAI**。配置与训练入口已准备，
+离线检查已通过，尚未执行服务器 GPU smoke 或新的正式训练。当前分支为
+`codex/retrain-spawrious-gai-author`，HEAD 为 `762cae1`；本次训练改动尚未提交、尚未推送。
+
+近期另外完成了 GAI 源码时序对照、GAI pivot 单因素验证、CMNIST 方向感知 oracle
+九组实验与选择频率分析。它们采用不同协议，结果单独记录在第 6.12–6.16 节，
+不能与下表直接混合求均值。当前没有证据证明方向感知方法在估计属性条件下有效，
+动态训练效用模块也仅处于讨论阶段。
+
+以下是 **2026-09 已冻结的四组论文复现实验**，比较对象是 Random，不能据此判断
+FedDiverse 相对所有其他算法的排名：
 
 1. CMNIST GSC：主要数值、方法排序和相对提升均已复现；
 2. Spawrious GSC：FedDiverse 绝对性能接近论文，相对 Random 的优势未复现；
@@ -12,7 +22,7 @@
 4. Spawrious GAI：Random 基线接近论文，但 FedDiverse 的绝对性能和相对优势
    均未复现。
 
-所有正式实验均使用数据 seed 42、43、44，报告最终模型的 worst-group
+以下四组正式实验均使用数据 seed 42、43、44，报告最终模型的 worst-group
 accuracy。表中“本次结果”使用总体标准差，不选择中间最佳 checkpoint。
 
 | 数据集 | 本次 Random | 本次 FedDiverse | 本次提升 | 论文 Random | 论文 FedDiverse | 论文提升 | 判定 |
@@ -23,8 +33,8 @@ accuracy。表中“本次结果”使用总体标准差，不选择中间最佳
 | Spawrious GAI | 86.2250 ± 1.9798 | 84.7003 ± 0.8445 | -1.5247 | 85.86 ± 2.56 | 87.28 ± 1.61 | +1.42 | Random 接近；FedDiverse 及相对优势未复现 |
 
 Spawrious GSC/GCI/GAI 的 checkpoint、日志、配置和元数据均已完成本地备份；
-GCI 已冻结，GAI 通过标签 `spawrious-gai-official-rng-v1` 冻结。已完成的数据集
-不再增加正式运行或选择性补跑。
+GCI 已冻结，GAI 通过标签 `spawrious-gai-official-rng-v1` 冻结。这批结果继续保留，
+不选择性补跑或替换。作者回复后的 GAI 重训是新授权的独立批次，不解除旧结果冻结。
 
 ## 2. 仓库、分支与冻结点
 
@@ -34,6 +44,9 @@ GCI 已冻结，GAI 通过标签 `spawrious-gai-official-rng-v1` 冻结。已完
 | Spawrious GSC | `reproduce-spawrious-gsc` | `a2959a6`；标签 `spawrious-gsc-official-rng-v1` | 已冻结并推送 |
 | Spawrious GCI | `reproduce-spawrious-gci` | `61a6581`；标签 `spawrious-gci-official-rng-v1` | 已冻结并推送 |
 | Spawrious GAI | `reproduce-spawrious-gai` | 标签 `spawrious-gai-official-rng-v1` | 已完成本地备份并冻结 |
+| GAI pivot 单因素验证 | `baseline-validation-v1` | `2613047` | 代码已推送；legacy/pivot 六次验证完成 |
+| CMNIST 方向感知 oracle | `research/cmnist-direction-aware-oracle` | `9762e55` → `726bc86` → `f47c814` → `762cae1` | 九组实验与选择频率分析已完成，结论有限 |
+| 作者回复后的 GAI 重训 | `codex/retrain-spawrious-gai-author` | 从 `762cae1` 创建；训练改动未提交 | 当前工作分支，仅完成本地准备 |
 
 关键实现提交：
 
@@ -44,16 +57,28 @@ GCI 已冻结，GAI 通过标签 `spawrious-gai-official-rng-v1` 冻结。已完
 - `2c250b6`：修复独立 Hydra 检查缺少动态 ConfigStore 注册的问题；
 - `61a6581`：记录 GCI 正式结果并作为 GCI 冻结点。
 - `9ae89e1`：加入 Spawrious GAI 正式配置和复现计划。
+- `2613047`：受控 baseline、pivot/ID 映射/选择器边界的单因素验证入口；
+- `9762e55`：CMNIST oracle 联合分布方向感知选择器；
+- `726bc86`：CMNIST 九组实验产物审计与汇总；
+- `f47c814`：选择覆盖分析；`762cae1`：删除额外实验 Markdown 文档。
 
 仓库位置：
 
-- 本地：`C:/Users/zy/Documents/ChatGPT/FedDiverse/SpuriousFL`；
-- 服务器：`/root/SpuriousFL`；
+- 本地：`D:/federated/FedDiverse/SpuriousFL`；
+- 最近实验使用的服务器项目目录：`/root/SpuriousFL`；
 - 远端：`https://github.com/mreason7/SpuriousFL.git`；
-- 服务器：`cpod-1uk7kkln33pu.podtcp.compshare.cn`；
+- 最近（10–11 月）实验服务器：`root@cpod-1wo0rf930ytu.podtcp.compshare.cn:22211`，
+  来自近期用户终端记录与本机 SSH 配置；本次文档更新未验证其当前在线状态；
+- 9 月旧服务器：`root@cpod-1uk7kkln33pu.podtcp.compshare.cn:27201`，
+  用户在“数据集分析”聊天中明确表示已删除。不得再将此旧地址默认当作当前训练机；
 - 论文原文：`D:/zotero_file/storage/VZD6UMI6/Németh 等 - 2025 - FedDiverse Tackling Data Heterogeneity in Federated Learning with Diversity-Driven Client Selection.pdf`。
 
-## 3. 环境与统一实验协议
+本地项目已整体迁移到 D 盘，包含 `.git`、模型备份与实验记录，Codex 项目路径已指向
+新目录。旧 `SpuriousFL` 目录已移除；`.validation_deps`、`.baseline-validation-checks`、
+`paper.txt` 和 `FedDiverse_backup` 目前位于 `D:/federated/FedDiverse/`。
+数据压缩包现位于 `D:/federated/FedDiverse/FedDiverse_backup/datasets/`。
+
+## 3. 9 月冻结实验的环境与协议
 
 ### 环境
 
@@ -103,10 +128,12 @@ FedDiverse：201 个 Flower 事件，对应 200 次模型更新：
 
 ### seed 的准确含义
 
-正式结果中的 `seed=42/43/44` 主要控制客户端数据划分，并非完整训练 seed。
+本节冻结结果中的 `seed=42/43/44` 主要控制客户端数据划分，并非完整训练 seed。
 模型初始化、DataLoader、DHT 训练、客户端选择和 Ray worker 的随机状态没有被
-统一固定，这是论文时期发布代码的行为。因此逐 seed 差值不能视为严格共享
-训练随机性的配对实验；正式比较口径是三次运行均值。
+统一固定，这是当时本地复现采用的运行方式；不能再等同于作者当年的完整随机性协议。
+作者后来说明使用 1、2、42 且共用一个全局 seed，但具体 worker 播种机制尚未确认。
+因此本节逐 seed 差值不能视为严格共享训练随机性的配对实验；比较口径是三次运行均值。
+10 月研究协议和 11 月作者回复后的协议另见第 6 节。
 
 ## 4. 已完成实验与产物索引
 
@@ -278,7 +305,7 @@ Random 下降 `1.5247` 个百分点。seed 43 的正提升与 seed 42/44 的负�
   4600；群体 `[y0g0,y0g1,y1g0,y1g1]` 为 `[2000,500,2000,100]`，客户端
   分片之间无重叠。
 
-每次正式 FedDiverse 运行必须满足：
+9 月这批采用论文式调度的正式 FedDiverse 运行必须满足：
 
 - `EXIT_CODE=0`；
 - 日志出现 `DHT collection round 2 completed without a model update`；
@@ -416,20 +443,204 @@ Ray 2.6.3 曾在第 1 轮前等待 `plasma_store` socket 超时。确认磁盘�
 本地网络也曾能 ping GitHub 但无法建立 TCP 443/22 连接。切换可用网络后推送
 成功；这是网络连接问题，不是 Git 仓库或提交损坏。
 
-## 7. 后续工作与边界
+### 6.12 四数据集分析与 10 月代码审计
 
-CMNIST GSC、Spawrious GSC/GCI/GAI 的正式运行、本地备份、结果记录与冻结均已
-完成。后续不增加正式运行、选择性补跑或中间 checkpoint 筛选。
+已建立“数据异质性 → 客户端互补性 → 实际选择 → 聚合群体覆盖 → 模型性能”的
+离线分析链，产物包括：
 
-自研阶段另建分支并采用完整受控播种协议，在同一协议下重跑所有基线，不与
-本文档中的 official-unseeded 论文复现结果混用。
+- `results/four_datasets_dataset_metrics.csv`；
+- `results/four_datasets_client_selection.csv`；
+- `results/four_datasets_exact_round_selections.csv`；
+- `results/four_datasets_round_selection_metrics.csv`；
+- `results/code_audit_20261020/evidence.json`。
 
-## 8. 新会话提示词
+审计发现 legacy 选择器在全零维度、共线向量、非 3 倍数参与数量等边界上存在问题；
+客户端位置与 ID 的映射在候选顺序变化时存在风险；legacy pivot 不等于按伪分组样本数差
+选择最平衡类别。早期固定轨迹未发现 ID 错配，不等于一般情况下不存在该风险。
+这些是实现/健壮性问题，不能把修正自动视为算法创新或性能提升。
 
-请先阅读 `REPRO_STATUS.md` 并检查 Git 状态。已完成 CMNIST GSC、Spawrious
-GSC、GCI 和 GAI 的 Random/FedDiverse 三数据 seed 正式实验。CMNIST 基本
-复现成功；Spawrious GSC 的相对优势未复现；Spawrious GCI 恢复了 `+1.4196`
-个百分点的平均优势；Spawrious GAI 的 FedDiverse 平均比 Random 低 `1.5247`
-个百分点，论文优势未复现。不要继续补跑或选择最佳 checkpoint。GSC/GCI 已
-完成独立备份。GAI 本地完整备份也已完成，并通过标签
-`spawrious-gai-official-rng-v1` 冻结；不要继续补跑或选择最佳 checkpoint。
+### 6.13 GAI pivot 单因素验证（2026-10-20）
+
+分支 `baseline-validation-v1`，代码提交 `2613047` 已推送。
+采用独立 validation、稳定数据顺序和受控 RNG：数据 seed=42/43/44，
+训练 seed=数据 seed+100，validation seed=数据 seed+1000。每对方法的数据清单与
+初始化哈希一致。该协议不同于 9 月 official-unseeded 结果。
+
+服务器 10 项 baseline 检查及 legacy/pivot/mapping/guarded 四组 smoke 已通过。
+正式仅运行 legacy 与 pivot，各三个 seed；mapping/guarded 未扩大正式训练。
+本地证据：`results/baseline_validation_20261020/formal_summary.json`。
+
+| 数据 seed | legacy 最终验证 WGA | pivot 最终验证 WGA | pivot − legacy（百分点） |
+|---:|---:|---:|---:|
+| 42 | 85.4386 | 83.5088 | -1.9298 |
+| 43 | 84.7368 | 83.3333 | -1.4035 |
+| 44 | 88.2456 | 85.7895 | -2.4561 |
+| 均值 | 86.1404 | 84.2105 | -1.9298 |
+
+六次运行最差群体均为 `y1g1`。pivot 修正未带来性能提升。
+这些是 validation 指标，不能当作 test 结果与 9 月数值直接比较。
+机制诊断资料曾要求从服务器导出；本地尚未发现对应诊断归档，不标为诊断已完成。
+
+### 6.14 CMNIST 方向感知 oracle 研究（2026-10-29）
+
+分支 `research/cmnist-direction-aware-oracle`。此批三方法 × 三 seed 共九次训练，
+均使用真实分组信息，区别于 9 月采用预测矩阵的 CMNIST 论文复现：
+
+- Random：`conf/research_cmnist_random.yaml`；
+- 真实 DHT：`conf/research_cmnist_oracle_dht.yaml`，`client_info: triplets`；
+- 方向感知：`conf/research_cmnist_direction_oracle.yaml`，`joint_direction_oracle`、
+  `client_info: joint_oracle`，使用真实联合矩阵。
+
+研究协议：数据 seed=42/43/44，训练 seed=数据 seed+100，validation seed=数据 seed+1000，
+从训练数据独立留出 10% validation。同一 seed 下三组数据与初始化哈希一致。
+200 次模型更新，使用最终 checkpoint；不依据测试结果调整均匀目标。
+方向组通过贪心添加和单客户端交换，使选中客户端平均联合分布接近四群体均匀目标。
+
+聊天中的服务器汇总记录如下，标准差使用 ddof=0：
+
+| 指标 | Random | 真实 DHT | 方向感知 oracle |
+|---|---:|---:|---:|
+| 最终 validation WGA | 92.5170 ± 1.3273 | 93.2414 ± 0.2228 | 93.6468 ± 0.0807 |
+| 最终 test WGA | 92.0825 ± 1.8531 | 93.4375 ± 0.5851 | 93.6267 ± 0.1045 |
+| test 平均准确率 | 95.5200 | 95.7533 | 95.9200 |
+| 平均联合分布目标误差 | 0.063696 | 0.031602 | 0.001975 |
+| 每轮最少群体平均占比 | 10.8440% | 14.3802% | 22.7778% |
+
+| seed | Random test WGA | 真实 DHT test WGA | 方向感知 test WGA |
+|---:|---:|---:|---:|
+| 42 | 89.6208 | 92.6148 | 93.5748 |
+| 43 | 94.0918 | 93.7725 | 93.5329 |
+| 44 | 92.5349 | 93.9252 | 93.7725 |
+
+方向感知相对真实 DHT 平均仅提高 `0.1892` 个百分点，逐 seed 差值为
+`+0.9600/-0.2395/-0.1528`。群体覆盖明显改善，但不能宣称稳定优于真实 DHT，
+更不能据此证明未知属性下的矩阵估计器有效。
+
+服务器 checkpoint 目录（均有 final 模型及验证/测试指标文件）：
+
+| seed | 方向感知 | 真实 DHT | Random |
+|---:|---|---|---|
+| 42 | `20261029-030744` | `20261029-034655` | `20261029-042632` |
+| 43 | `20261029-050624` | `20261029-054556` | `20261029-062600` |
+| 44 | `20261029-070616` | `20261029-074601` | `20261029-082543` |
+
+服务器运行 `tools/summarize_cmnist_direction.py` 输出 `Artifact checks passed`，
+产物在 `results/cmnist_direction_formal/`：`audit.json`、`runs.csv`、`summary.txt`。
+该审计不证明进程退出码及 DHT-only 运行日志，九份日志仍需另行核验。
+本次本地未发现该结果目录，不能将聊天中的服务器输出等同于本地产物已完整备份。
+
+选择频率分析（`tools/analyze_cmnist_selection.py`）已在服务器完成：三组均覆盖全部
+24 客户端；方向组有效客户端数约 17，真实 DHT 约 21.5，Random 约 23.9；
+最常选九人份额分别约 77.9%、59%、42%。方向组不是固定只训练九人，但选择更集中。
+方向组客户端 23 在三个 seed 中分别参与 199、199、198 次选择更新。
+
+结合客户端的六类真实分布，当前均匀目标误差 `0.0019753086` 已达到该结构下的下界。
+达到相同最优值的组合不唯一，不必总包含客户端 23。集中选择与性能收益小的关系仍是
+待验证解释，不能作因果归因。此前建议的额外 15 次训练已暂缓，尚未确认执行。
+完整最优组合枚举、方向消融、估计属性的跨客户端方向对齐和动态效用模块均未完成；
+“研究动态训练效用优先于继续堆叠均衡指标”是讨论建议，不是已验证结论或已实现功能。
+
+### 6.15 GAI 发布源码时序对照（2026-11-03）
+
+已在最近服务器完成 seeds 42、43、44 的 200 轮实验。
+仍使用当前仓库 25 客户端、4600 样本的 `spawrious_GAI_2`，没有恢复作者历史划分。
+从 `spawrious_gai_feddiverse_paper` 配置覆盖：
+`paper_faithful_pretrain=false`、`pretrain_rounds=1`、`dht_collection_rounds=0`、
+`rounds=200`、`update_static_info_rounds=0`。首轮估计 DHT 并训练，没有独立 DHT-only 事件。
+未补齐完整训练 RNG，不能将其与另一批结果逐 seed 作严格配对因果比较。
+
+| seed | 最终 test accuracy | 最终 test WGA | 服务器 checkpoint |
+|---:|---:|---:|---|
+| 42 | 92.8628 | 87.2240 | `20261103-110131/final` |
+| 43 | 92.6262 | 85.3312 | `20261103-115135/final` |
+| 44 | 92.1530 | 82.0189 | `20261103-124004/final` |
+| 均值 ± 总体标准差 | — | 84.8580 ± 2.1511 | — |
+
+聊天中三份日志均有 `Run finished 200 rounds`、最终保存及末轮指标。
+服务器日志模式：`logs/source_schedule/gai_seed<seed>_200rounds_*.log`。
+此批比历史论文式流程 FedDiverse 均值高 `0.1577`，仍比历史 Random 低 `1.3670`
+个百分点；仅切换时序没有恢复 GAI 优势。不能把这个跨批次差值解释为稳定时序效应。
+当前未确认这三次运行已下载至本地，不覆盖 9 月冻结归档。
+
+### 6.16 作者回复及新一轮 GAI 重训准备（2026-11-04）
+
+作者 Gergely 表示已失去原实验机器访问权限，可能从备份恢复配置 ID 和 WandB 产物。
+目前只“认为找到了一份 GAI 配置”，不是已核实的论文表格完整实验清单。
+
+邮件明确给出：seeds 为 `1、2、42`，仅设置一个 seed，其余共用全局 seed；
+DHT 在第一轮后确定，再做 199 轮选择训练；使用最后一个 checkpoint。
+作者曾试过每 50 轮刷新 DHT，未观察到改善，但未提供对应日志。
+
+附件：`D:/federated/FedDiverse/config.yaml`，运行 ID `20241114-153425`；
+作者给出的提交为 `3c92e8a5a80be836041e1f43bd921ed862156e67`，已在本地只读核对。
+该提交的历史 GAI_2 矩阵有 24 个客户端：前四个各 70 样本，后 20 个各 242 样本，
+合计 5120，与附件吻合。同名 GAI_2 在当前代码中是另一套 25 客户端、4600 样本划分。
+因此此前 GAI 差距至少包含数据划分及 seeds 未对齐的问题，不能仅归因于算法失效。
+
+用户已授权重训，并明确选择**按邮件时机**；随后要求直接使用新分支，
+不使用独立训练包、不主动新增说明类 `.md`。训练包与本次额外说明已清理。
+
+当前实现：
+
+- 分支：`codex/retrain-spawrious-gai-author`，从当前研究代码 `762cae1` 创建，
+  **不是**直接切换至作者历史提交；改动在工作区，未提交、未推送；
+- 配置：`conf/spawrious_gai_author.yaml`；
+- 独立划分名：`spawrious_GAI_2_author_20241114`，24 客户端、5120 样本；
+  原 `spawrious_GAI_2` 的 25 客户端划分保留；
+- 入口：`train_author_gai.py`、`src/author_protocol.py`；
+- 顺序运行及汇总：`tools/run_author_gai.py`，默认正式 seeds=1、2、42；
+- 检查：`tools/check_author_gai.py`，四项离线检查通过，Python 语法与 Hydra 完整解析通过；
+- 事件 1：全 24 客户端模型更新；事件 2：全客户端估计 DHT，不更新模型或动量；
+  事件 3–201：每轮选择 9 客户端，共 199 次更新；总计 200 次模型更新；
+- `client_info: groupweights_triplets_Npredicted`，保留 legacy pivot、选择器、ID 映射；
+- `research.enabled=false`，不套用 10 月研究协议的 seed+100 等派生播种；
+- 虽然 YAML 中 `paper_faithful_pretrain=false`、`dht_collection_rounds=0`，
+  邮件时序由新入口中的 `AuthorStrategy` 实现，不能改用原 `flower_train.py` 直接运行此配置。
+
+仍需明确保留的假设：附件 `pretrained: ???` 沿用历史工厂默认设为 true；
+首轮聚合保留 FedAvgM，邮件未确认应改为普通 FedAvg；全局种子按作者描述重建为
+driver/worker 每进程首次初始化时共用一个 seed，不每轮/每客户端反复重置，
+但并未证实这等同于作者当年的 worker 播种方式，也不保证逐位确定性。
+
+**当前进度仅到本地准备，尚无这批正式结果。** 本聊天此前误用 9 月旧服务器地址探测，
+连接失败不能证明 10–11 月服务器不可用。用户表示会恢复原服务器连接；
+开始训练前应先核实实际目标是否为最近使用的 `cpod-1wo0rf930ytu:22211`。
+
+## 7. 下一步与工作边界
+
+1. 优先接续作者回复后的 GAI 新批次。确认实际服务器、项目路径与环境后，
+   将本地新分支中选定的代码改动提交并同步到服务器；不要误提交其他聊天遗留的未跟踪文件。
+2. 在服务器项目目录依次执行以下命令；任何阶段失败先排查，不自动重试正式实验：
+
+   ```bash
+   python tools/run_author_gai.py --stage preflight
+   python tools/run_author_gai.py --stage smoke
+   python tools/run_author_gai.py --stage formal
+   ```
+
+   当前服务器尚未验证这些新入口。正式训练使用最终 checkpoint；预期参与记录为
+   `[24,24,9,...,9]` 共 201 行，仅事件 2 不更新模型。日志和汇总保存在 `run_logs/`。
+3. 对 10 月 CMNIST 九组和 11 月 GAI 源码时序结果补核日志、退出码及本地备份，
+   不能将聊天粘贴的汇总视为完整备份已完成。
+4. 9 月 24 次冻结运行继续保留；新作者协议、研究协议、源码时序协议分别报告，
+   不混合均值，不按测试分数筛选 checkpoint 或选择性补跑。
+5. 方向感知仅有 oracle 机制证据和较小的平均 WGA 增益；暂不追加此前讨论的 15 次训练，
+   不声称估计矩阵或动态效用模块已验证。
+6. 用户偏好：保留 `README.md` 与现有主目录/备份 `REPRO_STATUS.md`；
+   未明确要求时不新增说明类 `.md`，不再提供独立训练包。此次只更新主目录状态文件。
+
+## 8. 新会话接续提示
+
+先阅读本文件并检查 Git 状态。本地根目录是 `D:/federated/FedDiverse/SpuriousFL`。
+当前在 `codex/retrain-spawrious-gai-author`，HEAD=`762cae1`；作者重训代码尚未提交、
+未推送、未在服务器真实运行。首要任务是在确认实际服务器后运行预检、GPU smoke、
+再依次训练 1、2、42。必须使用 `tools/run_author_gai.py` 对应的新入口。
+
+旧四组结果仍冻结；CMNIST oracle 方向研究、GAI pivot 验证、GAI 源码时序对照是其他批次，
+不能混用。9 月旧服务器用户已表示删除，最近实验地址为
+`root@cpod-1wo0rf930ytu.podtcp.compshare.cn:22211`，当前连通性未知。
+不要把本地准备写成已完成训练，不按低分补跑，不挑最佳 checkpoint，不主动新增 `.md`。
+
+本次更新参考了项目聊天“思考_1103”“cmnist二次训练”“cmnist修改”“feddiverse2”
+“数据集分析”和当前“邮件回复1”，并以本地分支、配置及 JSON/CSV 记录核对；
+其中 CMNIST 九组与 11 月 GAI 源码时序数值来自用户粘贴的服务器输出，未重新连接服务器评估。

@@ -343,6 +343,16 @@ def split_mode_to_matrix(conf:dict)-> List:
         client_samples += [[[119, 5], [119, 5], [5, 119], [5, 119]]] * 7  # SC
         client_samples += [[[118, 5], [118, 5], [5, 118], [5, 118]]] * 9  # SC
     
+    if split_mode == "spawrious_GAI_2_author_20241114":
+        # Author attachment run 20241114-153425, commit 3c92e8a.
+        # Preserve the existing 25-client GAI_2 split for earlier experiments.
+        client_samples = [
+            [[15, 5], [5, 45]],
+            [[5, 45], [15, 5]],
+            [[15, 45], [5, 5]],
+            [[5, 5], [15, 45]],
+        ] + [[[1, 120], [1, 120]] for _ in range(20)]
+
     if split_mode=="spawrious_GAI_2":
         client_samples=[
             [[120, 5], [20, 10]],

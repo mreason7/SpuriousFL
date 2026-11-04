@@ -1,0 +1,96 @@
+defaults:
+  - job/federated_training@_here_
+  - machine: env
+  - client_opt: all_defaults
+  - server_opt: all_defaults
+  - model_options: mobilenet
+  - dataset_options: spawrious
+  - override hydra/launcher: basic
+  - _self_
+
+hydra:
+  mode: RUN
+  job:
+    chdir: false
+
+seed: 42
+research:
+  enabled: false
+wandb: false
+checkpoint: null
+client_opt:
+  subpop_optimizer: ERM
+  base_optimizer: SGD
+  learning_rate: 0.001
+  momentum: 0.9
+  batch_size: 28
+  epochs: 1
+  num_steps: null
+  biased_trainer_epochs: 1
+  biased_trainer_steps: 50
+  left_right_trainer_epochs: 10
+  left_right_trainer_steps: 10
+  generalized_cross_entropy_q: 0.3
+  biased_optimizer: ReSample
+  proximal_mu: 0.1
+  num_workers: 4
+server_opt:
+  optimizer: FedAvgM
+  rounds: 201
+  learning_rate: 0.1
+  beta_1: 0.95
+  beta_2: 0.99
+  tau: 1.0e-9
+  weight_clients: same
+  participation: selection
+  client_info: groupweights_triplets_Npredicted
+  selection_method: triplets_stochasticmatrix
+  pretrain_rounds: 1
+  num_active_clients: 9
+  paper_faithful_pretrain: false
+  dht_collection_rounds: 0
+  update_static_info_rounds: 0
+  pivot_mode: legacy
+  selector_mode: legacy
+  client_id_mapping: legacy
+model_options:
+  model_type: MobileNet
+  norm_layer: gn
+  # Attachment says ???; retain the historical model factory's default.
+  pretrained: true
+  hidden_units: null
+dataset_options:
+  name: Spawrious
+  num_targets: 2
+  num_groups: 2
+  num_clients: 24
+  split_mode: spawrious_GAI_2_author_20241114
+  input_size: 224
+  norm: true
+  aug_crop: 0
+  aug_horizontal_flip: false
+  data_shuffle_seed: null
+  dirichlet_alpha: null
+  confounding_factor: null
+  local_training_id: null
+  num_samples_per_class: null
+  locations: [beach, snow, desert, jungle, mountain, dirt]
+  breeds: [labrador, dachshund, bulldog, corgi]
+  categories: null
+  regions: null
+  num_celebrity: null
+  group_name: null
+  target_name: null
+machine:
+  root_path: ''
+  CUDA_VISIBLE_DEVICES: '0'
+  ray_init_args:
+    num_cpus: 8
+    num_gpus: 1
+    include_dashboard: false
+    object_store_memory: 4294967296
+    _system_config:
+      automatic_object_spilling_enabled: false
+  client_resources:
+    num_gpus: 0.25
+    num_cpus: 2
