@@ -1,0 +1,7 @@
+defaults:
+  - spawrious_gai_original
+  - _self_
+
+server_opt:
+  selection_method: random
+  client_info: ''
