@@ -5,6 +5,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import hydra
+
 os.environ.setdefault('AUTHOR_PROTOCOL', 'email')
 os.environ.setdefault('AUTHOR_SEED_MODE', 'global')
 
@@ -112,5 +114,18 @@ entry.train = train
 entry.data_preparation.load_data = load_data
 entry.data_preparation.split_data = split_data
 entry.fl.simulation.start_simulation = simulate
+
+
+def main():
+    # entry.main was decorated in an imported module, so its relative 'conf'
+    # is treated as a package. Reuse its body with an absolute filesystem path.
+    launch = hydra.main(
+        config_path=str(Path(__file__).resolve().parent / 'conf'),
+        config_name='spawrious_gai_author',
+        version_base=None,
+    )(entry.main.__wrapped__)
+    launch()
+
+
 if __name__ == '__main__':
-    entry.main()
+    main()

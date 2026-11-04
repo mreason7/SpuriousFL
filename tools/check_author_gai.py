@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -52,6 +53,44 @@ def load_classes():
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_imported_training_entry_resolves_hydra_config(self):
+        try:
+            import hydra
+            import yaml
+        except ImportError:
+            self.skipTest('Hydra unavailable; run this integration check in the training environment')
+        # Exercise the actual wrapper with real Hydra CLI handling, replacing
+        # only the GPU training body so configuration checks need no datasets.
+        script = '''
+import ast, sys
+from pathlib import Path
+from types import SimpleNamespace
+sys.path.insert(0, sys.argv[2])
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root))
+import hydra
+from hydra.core.config_store import ConfigStore
+from src.config_params import Config
+ConfigStore.instance().store(group='job', name='federated_training', node=Config)
+def raw_main(cfg):
+    raise RuntimeError('Configuration-only check must not start training')
+raw_main.__module__ = 'flower_train'
+tree = ast.parse((root / 'train_author_gai.py').read_text())
+tree.body = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'main']
+scope = dict(hydra=hydra, Path=Path, __file__=str(root / 'train_author_gai.py'),
+             entry=SimpleNamespace(main=SimpleNamespace(__wrapped__=raw_main)))
+exec(compile(tree, 'train_author_gai.py', 'exec'), scope)
+sys.argv = [str(root / 'train_author_gai.py'), '--cfg', 'job', '--resolve']
+scope['main']()
+'''
+        result = subprocess.run([sys.executable, '-c', script, str(ROOT),
+                                 str(Path(hydra.__file__).resolve().parents[1])],
+                                cwd=ROOT, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        config = yaml.safe_load(result.stdout)
+        self.assertEqual(config['dataset_options']['split_mode'], 'spawrious_GAI_2_author_20241114')
+        self.assertEqual(config['server_opt']['rounds'], 201)
+
     def test_historical_files_match_commit(self):
         historical = subprocess.check_output(['git', 'show',
             '3c92e8a5a80be836041e1f43bd921ed862156e67:src/datasets/data_splits.py'], cwd=ROOT, text=True)
