@@ -57,7 +57,7 @@ class ProtocolTests(unittest.TestCase):
             '3c92e8a5a80be836041e1f43bd921ed862156e67:src/datasets/data_splits.py'], cwd=ROOT, text=True)
         tree = ast.parse(historical)
         tree.body = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'split_mode_to_matrix']
-        scope = {}
+        scope = {'List': list}
         exec(compile(tree, 'historical_split.py', 'exec'), scope)
         expected = scope['split_mode_to_matrix']('spawrious_GAI_2')
         self.assertEqual(self.current_split('spawrious_GAI_2_author_20241114'), expected)

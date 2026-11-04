@@ -35,6 +35,7 @@ def assets(directory):
 
 
 def preflight():
+    print('PREFLIGHT: checking PyTorch, configuration, GPU and training imports...', flush=True)
     import torch
     from hydra import compose, initialize_config_dir
     from hydra.core.config_store import ConfigStore
@@ -101,17 +102,22 @@ def main():
                   'client_opt.left_right_trainer_steps=2'] if args.stage == 'smoke' else [])
                 for seed in seeds]
     verify_source()
-    for command in commands:
-        print('COMMAND', ' '.join(command), flush=True)
+    if args.stage == 'preflight':
+        print('PREFLIGHT: checking readiness only; no training will start.', flush=True)
+    else:
+        for command in commands:
+            print('COMMAND', ' '.join(command), flush=True)
     if args.stage == 'plan':
         return
     os.chdir(ROOT)
     os.environ.update(AUTHOR_PROTOCOL=args.protocol, AUTHOR_SEED_MODE=args.seed_mode,
                       CUDA_VISIBLE_DEVICES=args.gpu)
+    print('PREFLIGHT: checking dataset and pretrained weights...', flush=True)
     assets(args.assets_root.resolve())
     environment = preflight()
     print(json.dumps(environment, indent=2), flush=True)
     if args.stage == 'preflight':
+        print('PREFLIGHT PASSED', flush=True)
         return
     stamp = datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S-%f')
     output = ROOT / 'run_logs' / f'{args.stage}-{args.protocol}-{stamp}'
