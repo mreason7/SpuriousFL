@@ -53,6 +53,37 @@ def load_classes():
 
 
 class ProtocolTests(unittest.TestCase):
+    def test_random_control_has_200_updates_and_never_collects_dht(self):
+        scope = load_classes()
+        tree = ast.parse((ROOT / 'src/author_random.py').read_text())
+        tree.body = [node for node in tree.body if isinstance(node, ast.ClassDef)]
+        scope.update(MyStrategy=SourceStrategy)
+        exec(compile(tree, 'author_random.py', 'exec'), scope)
+        strategy = scope['RandomStrategy']()
+        manager = SimpleNamespace(sample=lambda num_clients, **kwargs:
+            [SimpleNamespace(cid=str(i)) for i in range(num_clients)])
+        temporary_root = ROOT / 'results/author_gai_20261104_checks'
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as tmp:
+            self.assertTrue(Path(tmp).resolve().is_relative_to(temporary_root.resolve()))
+            strategy.conf = dict(dataset_options=dict(num_clients=24), exp_id=tmp)
+            strategy.shared_copt_params = {}
+            strategy.stored_client_data = {}
+            strategy.current_weights, strategy.m_t = [0], [0]
+            strategy.log_client_info = lambda rnd: None
+            participation = []
+            for rnd in range(1, 201):
+                tasks = strategy.configure_fit(rnd, None, manager)
+                participation.append(len(tasks))
+                self.assertEqual(strategy.client_update_requested, [])
+                self.assertTrue(all(not t.config['metadata_only'] and not t.config['update_info']
+                                    for _, t in tasks))
+                results = [(c, SimpleNamespace(metrics={'cid': int(c.cid)})) for c, _ in tasks]
+                strategy.aggregate_fit(rnd, results, [])
+            self.assertEqual(participation, [24] + [9] * 199)
+            self.assertEqual(strategy.current_weights, [200])
+            self.assertEqual(strategy.m_t, [400])
+
     def test_imported_training_entry_resolves_hydra_config(self):
         try:
             import hydra

@@ -34,7 +34,7 @@ def assets(directory):
             raise RuntimeError(f'Missing required asset: {path}')
 
 
-def preflight():
+def preflight(method='feddiverse'):
     print('PREFLIGHT: checking PyTorch, configuration, GPU and training imports...', flush=True)
     import torch
     from hydra import compose, initialize_config_dir
@@ -43,13 +43,19 @@ def preflight():
     from src.config_params import Config
     ConfigStore.instance().store(group='job', name='federated_training', node=Config)
     with initialize_config_dir(config_dir=str(ROOT / 'conf'), version_base=None):
-        conf = OmegaConf.to_container(compose(config_name='spawrious_gai_author'), resolve=True,
+        config_name = 'spawrious_gai_author_random' if method == 'random' else 'spawrious_gai_author'
+        conf = OmegaConf.to_container(compose(config_name=config_name), resolve=True,
                                       throw_on_missing=True)
-    if conf['dataset_options']['num_clients'] != 24 or conf['server_opt']['rounds'] != 201:
+    expected_rounds = 200 if method == 'random' else 201
+    if conf['dataset_options']['num_clients'] != 24 or conf['server_opt']['rounds'] != expected_rounds:
         raise RuntimeError('Wrong author configuration')
     if not torch.cuda.is_available():
         raise RuntimeError('CUDA is unavailable in this Python environment')
     import train_author_gai  # noqa: F401
+    if method == 'random':
+        import train_author_gai_random  # noqa: F401
+        if conf['server_opt']['selection_method'] != 'random' or conf['server_opt']['client_info']:
+            raise RuntimeError('Random control must not estimate DHT')
     weights = ROOT / 'pretrained_ckpt/pt_mobilenetv2_100-4065ukrp/pretrained_imagenet.pth'
     return dict(python=sys.version, gpu=torch.cuda.get_device_name(0),
                 pretrained_sha256=hashlib.sha256(weights.read_bytes()).hexdigest(),
@@ -85,6 +91,7 @@ def verify_run(directory, rounds, protocol):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--stage', choices=('plan', 'preflight', 'smoke', 'formal'), default='plan')
+    parser.add_argument('--method', choices=('feddiverse', 'random'), default='feddiverse')
     parser.add_argument('--protocol', choices=('email',), default='email')
     parser.add_argument('--seed-mode', choices=('global', 'source'), default='global',
                         help='global: shared seed once per process; source: unchanged historical RNG')
@@ -95,8 +102,12 @@ def main():
     seeds = [int(s) for s in (args.seeds or ('42' if args.stage == 'smoke' else '1,2,42')).split(',')]
     if len(seeds) != len(set(seeds)):
         parser.error('Repeated seed')
-    rounds = 3 if args.stage == 'smoke' else (201 if args.protocol == 'email' else 200)
-    commands = [[sys.executable, 'train_author_gai.py', '--config-name=spawrious_gai_author', f'seed={seed}',
+    if args.method == 'random':
+        args.protocol = 'random'
+    rounds = (2 if args.method == 'random' else 3) if args.stage == 'smoke' else (200 if args.method == 'random' else 201)
+    entry = 'train_author_gai_random.py' if args.method == 'random' else 'train_author_gai.py'
+    config_name = 'spawrious_gai_author_random' if args.method == 'random' else 'spawrious_gai_author'
+    commands = [[sys.executable, entry, f'--config-name={config_name}', f'seed={seed}',
                  f'server_opt.rounds={rounds}'] +
                 (['client_opt.num_steps=2', 'client_opt.biased_trainer_steps=2',
                   'client_opt.left_right_trainer_steps=2'] if args.stage == 'smoke' else [])
@@ -114,7 +125,7 @@ def main():
                       CUDA_VISIBLE_DEVICES=args.gpu)
     print('PREFLIGHT: checking dataset and pretrained weights...', flush=True)
     assets(args.assets_root.resolve())
-    environment = preflight()
+    environment = preflight(args.method)
     print(json.dumps(environment, indent=2), flush=True)
     if args.stage == 'preflight':
         print('PREFLIGHT PASSED', flush=True)
@@ -129,6 +140,8 @@ def main():
                   'src/flower_manager.py', 'src/datasets/data_splits.py',
                   'src/datasets/spawrious.py', 'src/optimizers/matrix_inference.py',
                   'src/optimizers/weighting_strategy.py', 'src/optimizers/subpopbench.py']
+    if args.method == 'random':
+        code_files += ['train_author_gai_random.py', 'src/author_random.py', 'conf/spawrious_gai_author_random.yaml']
     (output / 'code_sha256.json').write_text(json.dumps({
         name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest() for name in code_files}, indent=2))
     summary = []
