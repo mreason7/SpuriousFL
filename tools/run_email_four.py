@@ -9,6 +9,7 @@ from pathlib import Path
 import statistics
 import subprocess
 import sys
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -57,6 +58,56 @@ def summarize(rows):
                     seeds=[r['seed'] for r in group], mean=statistics.mean(values),
                     std_population=statistics.pstdev(values)))
     return result
+
+
+def run_summary(job, metrics, directory, stage, elapsed):
+    updates = job['rounds'] - int(job['method'] == 'feddiverse')
+    lines = ['', '=' * 64, 'FINAL TRAINING SUMMARY', 'Status: COMPLETED AND VERIFIED',
+             f"Dataset: {job['dataset']} | Method: {job['method']} | Seed: {job['seed']}",
+             f"Stage: {stage} | Clients: {job['num_clients']} | Selected per update after round 1: 9",
+             f"Model updates: {updates} | Flower events: {job['rounds']}",
+             f"Elapsed: {elapsed / 60:.2f} minutes",
+             f"Final test accuracy: {metrics['test_accuracy']:.4f}%",
+             f"Final worst-group accuracy (WGA): {metrics['worst_group']:.4f}%"]
+    groups = {k: metrics[k] for k in ('y0g0', 'y0g1', 'y1g0', 'y1g1') if k in metrics}
+    for name, accuracy in groups.items():
+        lines.append(f'  {name}: {accuracy:.4f}%')
+    if groups:
+        worst = min(groups.values())
+        names = [k for k, value in groups.items() if abs(value - worst) < 1e-8]
+        lines.append('Worst group(s): ' + ', '.join(names))
+    lines += [f'Checkpoint: {directory / "final/torchmodel.pt"}',
+              'Evaluation: final checkpoint; intermediate best scores are not selected.']
+    if stage == 'smoke':
+        lines.append('Smoke test only: reduced training budget; do not assess method effectiveness.')
+    else:
+        lines.append('Method effectiveness is assessed against the matched control and across seeds.')
+    return '\n'.join(lines + ['=' * 64, ''])
+
+
+def pair_summary(rows, stage):
+    methods = {r['method']: r for r in rows}
+    if not {'random', 'feddiverse'} <= methods.keys():
+        return None
+    random, fed = methods['random'], methods['feddiverse']
+    delta = fed['worst_group'] - random['worst_group']
+    accuracy_delta = fed['test_accuracy'] - random['test_accuracy']
+    conclusion = ('higher' if delta > 1e-8 else 'lower' if delta < -1e-8 else 'equal')
+    return '\n'.join(['', '=' * 64, 'MATCHED PAIR SUMMARY',
+        f"Dataset: {fed['dataset']} | Seed: {fed['seed']}",
+        'Data manifest and initial model hashes: MATCHED',
+        f"Random WGA: {random['worst_group']:.4f}%",
+        f"FedDiverse WGA: {fed['worst_group']:.4f}%",
+        f'FedDiverse - Random WGA: {delta:+.4f} percentage points',
+        f'FedDiverse - Random test accuracy: {accuracy_delta:+.4f} percentage points',
+        ('Smoke test only: no effectiveness conclusion.' if stage == 'smoke' else
+         f'Observed final WGA in this pair: FedDiverse is {conclusion} than Random; '
+         'this single seed does not establish a stable advantage.'), '=' * 64, ''])
+
+
+def append_log(path, text):
+    with path.open('a', encoding='utf-8') as stream:
+        stream.write(text)
 
 
 def main():
@@ -142,26 +193,45 @@ def main():
         env = dict(os.environ, PYTHONHASHSEED=str(job['seed']), AUTHOR_PROTOCOL='email-four-v1')
         log = output / f"{job['dataset']}_{job['method']}_seed{job['seed']}.log"
         print('START', job['dataset'], job['method'], job['seed'], 'log=', log, flush=True)
+        started = time.monotonic()
         with log.open('w', encoding='utf-8') as stream:
             result = subprocess.run(job['command'], cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT)
         if result.returncode:
+            append_log(log, f'\nFINAL TRAINING SUMMARY\nStatus: FAILED\n'
+                f"Dataset: {job['dataset']} | Method: {job['method']} | Seed: {job['seed']}\n"
+                f'Exit code: {result.returncode}\nNo verified final result; subsequent runs stopped.\n')
             raise RuntimeError(f'Run failed ({result.returncode}); stopped. Inspect {log}')
-        created = set((ROOT / 'checkpoints').glob('*/config.yaml')) - before
-        if len(created) != 1:
-            raise RuntimeError('Expected one new run directory')
-        directory = created.pop().parent
-        metrics = verify(directory, job['rounds'], job['method'], job['num_clients'])
-        hashes = {n: (directory / n).read_text().strip() for n in
-                  ('data_manifest.sha256', 'initial_weights.sha256')}
-        key = (job['dataset'], job['seed'])
-        if key in pairs and pairs[key] != hashes:
-            raise RuntimeError(f'Pair data/initialization differs; stopped: {key}, {directory}')
+        try:
+            created = set((ROOT / 'checkpoints').glob('*/config.yaml')) - before
+            if len(created) != 1:
+                raise RuntimeError('Expected one new run directory')
+            directory = created.pop().parent
+            metrics = verify(directory, job['rounds'], job['method'], job['num_clients'])
+            hashes = {n: (directory / n).read_text().strip() for n in
+                      ('data_manifest.sha256', 'initial_weights.sha256')}
+            key = (job['dataset'], job['seed'])
+            if key in pairs and pairs[key] != hashes:
+                raise RuntimeError(f'Pair data/initialization differs; stopped: {key}, {directory}')
+        except Exception as error:
+            append_log(log, f'\nFINAL TRAINING SUMMARY\nStatus: VERIFICATION FAILED\n'
+                f"Dataset: {job['dataset']} | Method: {job['method']} | Seed: {job['seed']}\n"
+                f'Reason: {error}\nMetrics are not accepted as a verified result; subsequent runs stopped.\n')
+            raise
         pairs[key] = hashes
         summary.append(dict(dataset=job['dataset'], method=job['method'], seed=job['seed'],
                             checkpoint=str(directory), log=str(log), hashes=hashes, **metrics))
         (output / 'summary.json').write_text(json.dumps(summary, indent=2))
         (output / 'aggregate.json').write_text(json.dumps(summarize(summary), indent=2))
-        print('VERIFIED', job['dataset'], job['method'], job['seed'], metrics, flush=True)
+        footer = run_summary(job, metrics, directory, args.stage, time.monotonic() - started)
+        append_log(log, footer)
+        (directory / 'run_summary.txt').write_text(footer, encoding='utf-8')
+        print(footer, flush=True)
+        matched = [r for r in summary if (r['dataset'], r['seed']) == key]
+        comparison = pair_summary(matched, args.stage)
+        if comparison:
+            for row in matched:
+                append_log(Path(row['log']), comparison)
+            print(comparison, flush=True)
     print('COMPLETED', len(summary), output, flush=True)
 
 
