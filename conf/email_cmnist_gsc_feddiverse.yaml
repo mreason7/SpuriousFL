@@ -1,0 +1,14 @@
+defaults:
+  - spawrious_gai_author
+  - _self_
+seed: 42
+dataset_options:
+  name: CMNIST
+  input_size: 28
+  split_mode: spawrious2
+  confounding_factor: 0.5
+server_opt:
+  rounds: 201
+  optimizer: FedAvgM
+  learning_rate: 0.1
+  beta_1: 0.95

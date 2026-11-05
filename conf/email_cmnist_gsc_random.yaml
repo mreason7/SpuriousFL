@@ -1,0 +1,7 @@
+defaults:
+  - email_cmnist_gsc_feddiverse
+  - _self_
+server_opt:
+  rounds: 200
+  selection_method: random
+  client_info: ''

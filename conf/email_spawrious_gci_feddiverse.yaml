@@ -1,0 +1,14 @@
+defaults:
+  - spawrious_gai_author
+  - _self_
+seed: 42
+dataset_options:
+  name: Spawrious
+  input_size: 224
+  split_mode: spawrious_GCI
+  confounding_factor: 0.5
+server_opt:
+  rounds: 201
+  optimizer: FedAvgM
+  learning_rate: 0.1
+  beta_1: 0.95

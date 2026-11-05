@@ -14,6 +14,7 @@ class CMNIST(VisionDataset, SubpopDataset):
         train=True,
         confounding_factor: float = 0.5,
         transforms=None,
+        attribute_seed=42,
     ) -> None:
         self.root = root
         self.transform = transforms
@@ -21,7 +22,7 @@ class CMNIST(VisionDataset, SubpopDataset):
         self.subset.targets = (self.subset.targets >= 5).to(torch.int64)
         self.subset.data = torch.einsum("ijk,c -> ijkc", self.subset.data, torch.tensor([1, 1, 1], dtype=torch.uint8))
 
-        rng = np.random.RandomState(42)
+        rng = np.random.RandomState(attribute_seed)
 
         def generate_attr(targets, alpha):
             attr = torch.zeros_like(targets)
