@@ -33,9 +33,34 @@ class UnifiedChecks(unittest.TestCase):
         for dataset in DATASETS:
             conf = resolved_config(f'email_{dataset}_feddiverse')
             matrix = scope['split_mode_to_matrix'](conf)
-            self.assertEqual(len(matrix), 24)
+            expected_clients = 25 if dataset == 'spawrious_gai' else 24
+            self.assertEqual(len(matrix), expected_clients)
+            self.assertEqual(conf['dataset_options']['num_clients'], expected_clients)
             self.assertEqual(sum(sum(map(sum, m)) for m in matrix),
-                             5120 if dataset == 'spawrious_gai' else 4800)
+                             4600 if dataset == 'spawrious_gai' else 4800)
+
+    def test_verifier_accepts_25_client_schedule_and_rejects_wrong_count(self):
+        import json
+        import tempfile
+        temporary_root = ROOT / 'results/email_four_checks'
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=temporary_root) as tmp:
+            directory = Path(tmp)
+            self.assertTrue(directory.resolve().is_relative_to(temporary_root.resolve()))
+            (directory / 'final').mkdir()
+            for name in ('config.yaml', 'final/torchmodel.pt', 'data_manifest.json',
+                         'data_manifest.sha256', 'initial_weights.sha256', 'unified_protocol.json'):
+                (directory / name).touch()
+            (directory / 'final_test_metrics.json').write_text(json.dumps({'worst_group': 80.0}))
+            for method, counts in [('feddiverse', [25, 25, 9]), ('random', [25, 9, 9])]:
+                (directory / 'client_weights.csv').write_text('\n'.join(
+                    ','.join(str(int(i < count)) for i in range(25)) for count in counts))
+                (directory / 'schedule.jsonl').write_text('\n'.join(json.dumps(dict(
+                    round=r, phase='aggregated', model_update=not (method == 'feddiverse' and r == 2)))
+                    for r in range(1, 4)))
+                self.assertEqual(verify(directory, 3, method, 25)['worst_group'], 80.0)
+                with self.assertRaisesRegex(RuntimeError, 'participation'):
+                    verify(directory, 3, method, 24)
 
     def test_shared_seed_is_set_only_once_per_process(self):
         tree = ast.parse((ROOT / 'src/author_protocol.py').read_text())

@@ -5,7 +5,8 @@ seed: 42
 dataset_options:
   name: Spawrious
   input_size: 224
-  split_mode: spawrious_GAI_2_author_20241114
+  split_mode: spawrious_GAI_2
+  num_clients: 25
   confounding_factor: 0.5
 server_opt:
   rounds: 201

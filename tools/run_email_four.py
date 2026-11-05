@@ -25,7 +25,7 @@ def resolved_config(name):
         return OmegaConf.to_container(compose(config_name=name), resolve=True, throw_on_missing=True)
 
 
-def verify(directory, rounds, method):
+def verify(directory, rounds, method, num_clients=24):
     for name in ('config.yaml', 'final/torchmodel.pt', 'client_weights.csv', 'schedule.jsonl',
                  'data_manifest.json', 'data_manifest.sha256', 'initial_weights.sha256',
                  'final_test_metrics.json', 'unified_protocol.json'):
@@ -33,9 +33,9 @@ def verify(directory, rounds, method):
             raise RuntimeError(f'Missing artifact: {directory / name}')
     rows = [[float(x) for x in line.split(',')] for line in
             (directory / 'client_weights.csv').read_text().splitlines()]
-    counts = ([24, 24] + [9] * (rounds - 2) if method == 'feddiverse'
-              else [24] + [9] * (rounds - 1))
-    if len(rows) != rounds or any(len(r) != 24 or sum(r) != n or
+    counts = ([num_clients, num_clients] + [9] * (rounds - 2) if method == 'feddiverse'
+              else [num_clients] + [9] * (rounds - 1))
+    if len(rows) != rounds or any(len(r) != num_clients or sum(r) != n or
             any(x not in (0, 1) for x in r) for r, n in zip(rows, counts)):
         raise RuntimeError('Incorrect participation schedule')
     events = [json.loads(x) for x in (directory / 'schedule.jsonl').read_text().splitlines()]
@@ -91,7 +91,8 @@ def main():
                     command += ['client_opt.num_steps=2', 'client_opt.biased_trainer_steps=2',
                                 'client_opt.left_right_trainer_steps=2']
                 jobs.append(dict(dataset=dataset, seed=seed, method=method, rounds=rounds,
-                                 config=config, command=command))
+                                 config=config, command=command,
+                                 num_clients=25 if dataset == 'spawrious_gai' else 24))
     if args.stage == 'plan':
         print(json.dumps(dict(protocol='email-four-v1', jobs=jobs), indent=2))
         return
@@ -105,7 +106,8 @@ def main():
         if differences != {'rounds', 'selection_method', 'client_info'}:
             raise RuntimeError(f'Unexpected method difference: {differences}')
         if (fed['dataset_options']['num_clients'], fed['server_opt']['rounds'],
-            rnd['server_opt']['rounds'], fed['server_opt']['paper_faithful_pretrain']) != (24, 201, 200, False):
+            rnd['server_opt']['rounds'], fed['server_opt']['paper_faithful_pretrain']) != (
+                25 if dataset == 'spawrious_gai' else 24, 201, 200, False):
             raise RuntimeError('Incorrect email protocol settings')
     print('CONFIG CHECK PASSED', flush=True)
     if args.stage == 'check':
@@ -148,7 +150,7 @@ def main():
         if len(created) != 1:
             raise RuntimeError('Expected one new run directory')
         directory = created.pop().parent
-        metrics = verify(directory, job['rounds'], job['method'])
+        metrics = verify(directory, job['rounds'], job['method'], job['num_clients'])
         hashes = {n: (directory / n).read_text().strip() for n in
                   ('data_manifest.sha256', 'initial_weights.sha256')}
         key = (job['dataset'], job['seed'])

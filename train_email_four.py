@@ -46,8 +46,9 @@ def load_data(*args, **kwargs):
 def split_data(dataset, conf):
     clients = author.original_split(dataset, conf)
     expected = split_mode_to_matrix(conf)
-    if len(clients) != 24 or len(expected) != 24:
-        raise RuntimeError('Expected exactly 24 clients')
+    num_clients = conf['dataset_options']['num_clients']
+    if len(clients) != num_clients or len(expected) != num_clients:
+        raise RuntimeError('Client count differs from the configured split')
     all_members = members(dataset)
     test_members = members(loaded['test'])
     seen, manifest = set(), []
@@ -65,7 +66,8 @@ def split_data(dataset, conf):
     if conf['dataset_options']['name'] == 'Spawrious' and seen & {r[0] for r in test_members}:
         raise RuntimeError('Train/test overlap')
     total = sum(len(c) for c in clients)
-    if total != (5120 if 'author_20241114' in conf['dataset_options']['split_mode'] else 4800):
+    expected_total = sum(sum(map(sum, matrix)) for matrix in expected)
+    if total != expected_total:
         raise RuntimeError('Wrong training sample budget')
     output = Path('checkpoints') / conf['exp_id']
     value = dict(clients=manifest, test=test_members)
