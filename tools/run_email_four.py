@@ -122,13 +122,46 @@ def append_log(path, text):
         stream.write(text)
 
 
+def load_append_rows(output, jobs):
+    """Read an existing formal batch and reject overwriting any run/log."""
+    if not output.is_dir() or not (output / 'plan.json').is_file():
+        raise RuntimeError(f'Existing batch/plan not found: {output}')
+    plan = json.loads((output / 'plan.json').read_text())
+    if any(j['rounds'] != (201 if j['method'] == 'feddiverse' else 200) for j in plan['jobs']):
+        raise RuntimeError('Cannot append formal runs to a smoke batch')
+    rows = json.loads((output / 'summary.json').read_text())
+    keys = [(r['dataset'], r['seed'], r['method']) for r in rows]
+    if len(keys) != len(set(keys)):
+        raise RuntimeError('Existing summary has duplicate runs')
+    for job in jobs:
+        log = output / f"{job['dataset']}_{job['method']}_seed{job['seed']}.log"
+        if (job['dataset'], job['seed'], job['method']) in keys or log.exists():
+            raise RuntimeError(f'Run or log already exists; refusing to overwrite: {log}')
+    return rows
+
+
+def save_extension_plan(output, jobs, environment, commit, stamp):
+    original = json.loads((output / 'plan.json').read_text())
+    for key in ('pretrained_sha256', 'versions'):
+        if original['environment'][key] != environment[key]:
+            raise RuntimeError(f'Existing batch environment differs: {key}')
+    # Preserve the original plan and pre-extension summaries byte for byte.
+    for name in ('summary.json', 'aggregate.json'):
+        source = output / name
+        if source.is_file():
+            with (output / f'{source.stem}_before_append_{stamp}.json').open('xb') as stream:
+                stream.write(source.read_bytes())
+    with (output / f'extension_plan_{stamp}.json').open('x', encoding='utf-8') as stream:
+        json.dump(dict(jobs=jobs, environment=environment, commit=commit), stream, indent=2)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--stage', choices=('plan', 'check', 'preflight', 'smoke', 'formal', 'summary'), default='plan')
     p.add_argument('--seeds', default=None)
     p.add_argument('--datasets', default=','.join(DEFAULT_DATASETS))
     p.add_argument('--gpu', default='0')
-    p.add_argument('--batch', type=Path, help='Existing batch folder for summary')
+    p.add_argument('--batch', type=Path, help='Existing formal batch to append to, or to summarize')
     args = p.parse_args()
     os.chdir(ROOT)
     if args.stage == 'summary':
@@ -136,6 +169,8 @@ def main():
             p.error('--batch is required for summary')
         print(json.dumps(summarize(json.loads((args.batch / 'summary.json').read_text())), indent=2))
         return
+    if args.batch is not None and args.stage == 'smoke':
+        p.error('Smoke runs must remain separate from the formal batch; omit --batch for smoke')
     seeds = [int(x) for x in (args.seeds or ('42' if args.stage == 'smoke' else '42,3407')).split(',')]
     datasets = args.datasets.split(',')
     if len(seeds) != len(set(seeds)) or not seeds or any(s < 0 or s >= 2**32 for s in seeds):
@@ -156,8 +191,11 @@ def main():
                 jobs.append(dict(dataset=dataset, seed=seed, method=method, rounds=rounds,
                                  config=config, command=command,
                                  num_clients=CLIENT_COUNTS[dataset], selected_clients=active_clients(dataset)))
+    existing = load_append_rows(args.batch, jobs) if args.batch is not None else []
     if args.stage == 'plan':
-        print(json.dumps(dict(protocol='email-four-v1', jobs=jobs), indent=2))
+        print(json.dumps(dict(protocol='email-four-v1', jobs=jobs,
+                              append_to=str(args.batch) if args.batch else None,
+                              existing_runs=len(existing)), indent=2))
         return
     for dataset in datasets:
         fed = resolved_config(f'email_{dataset}_feddiverse')
@@ -201,18 +239,27 @@ def main():
     if args.stage == 'preflight':
         print('PREFLIGHT PASSED; no training started')
         return
-    output = ROOT / 'run_logs' / (BATCH_PREFIX + '-' + args.stage + '-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
-    output.mkdir(parents=True, exist_ok=False)
+    stamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+    output = args.batch or ROOT / 'run_logs' / (BATCH_PREFIX + '-' + args.stage + '-' + stamp)
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
-    (output / 'plan.json').write_text(json.dumps(dict(jobs=jobs, environment=environment, commit=commit), indent=2))
-    summary, pairs = [], {}
+    if args.batch is not None:
+        save_extension_plan(output, jobs, environment, commit, stamp)
+    else:
+        output.mkdir(parents=True, exist_ok=False)
+        (output / 'plan.json').write_text(json.dumps(dict(jobs=jobs, environment=environment, commit=commit), indent=2))
+    summary, pairs = list(existing), {}
+    for row in existing:
+        key = (row['dataset'], row['seed'])
+        if key in pairs and pairs[key] != row['hashes']:
+            raise RuntimeError(f'Existing pair hashes differ: {key}')
+        pairs[key] = row['hashes']
     for job in jobs:
         before = set((ROOT / 'checkpoints').glob('*/config.yaml'))
         env = dict(os.environ, PYTHONHASHSEED=str(job['seed']), AUTHOR_PROTOCOL='email-four-v1')
         log = output / f"{job['dataset']}_{job['method']}_seed{job['seed']}.log"
         print('START', job['dataset'], job['method'], job['seed'], 'log=', log, flush=True)
         started = time.monotonic()
-        with log.open('w', encoding='utf-8') as stream:
+        with log.open('x', encoding='utf-8') as stream:
             result = subprocess.run(job['command'], cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT)
         if result.returncode:
             append_log(log, f'\nFINAL TRAINING SUMMARY\nStatus: FAILED\n'

@@ -11,11 +11,39 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from run_email_four import REMAINING_DATASETS, resolved_config, verify, run_summary
+from run_email_four import (REMAINING_DATASETS, resolved_config, verify, run_summary,
+                           load_append_rows, save_extension_plan, summarize)
 from check_author_gai import load_classes, SourceStrategy
 
 
 class RemainingChecks(unittest.TestCase):
+    def test_append_preserves_original_batch_and_rejects_duplicates(self):
+        root = ROOT / 'results/email_remaining_checks'
+        root.mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=root) as tmp:
+            output = Path(tmp)
+            environment = dict(pretrained_sha256='same-weights', versions={'torch': '2.3.0'})
+            original = dict(jobs=[dict(rounds=200, method='random')], environment=environment)
+            rows = [dict(dataset='cmnist_gsc', seed=42, method='random', worst_group=90)]
+            (output / 'plan.json').write_text(json.dumps(original))
+            (output / 'summary.json').write_text(json.dumps(rows))
+            (output / 'aggregate.json').write_text('[]')
+            plan_bytes = (output / 'plan.json').read_bytes()
+            jobs = [dict(dataset='waterbirds_dist', seed=42, method='random')]
+            self.assertEqual(load_append_rows(output, jobs), rows)
+            save_extension_plan(output, jobs, environment, 'new-commit', 'test')
+            self.assertEqual((output / 'plan.json').read_bytes(), plan_bytes)
+            self.assertEqual(json.loads((output / 'summary_before_append_test.json').read_text()), rows)
+            self.assertTrue((output / 'extension_plan_test.json').is_file())
+            combined = rows + [dict(dataset='waterbirds_dist', seed=42, method='random', worst_group=50)]
+            self.assertEqual(len(summarize(combined)), 2)
+            with self.assertRaisesRegex(RuntimeError, 'refusing to overwrite'):
+                load_append_rows(output, [dict(dataset='cmnist_gsc', seed=42, method='random')])
+            (output / 'waterbirds_dist_random_seed42.log').write_text('keep')
+            with self.assertRaisesRegex(RuntimeError, 'refusing to overwrite'):
+                load_append_rows(output, jobs)
+            self.assertEqual((output / 'waterbirds_dist_random_seed42.log').read_text(), 'keep')
+
     def test_config_matrices_and_matching_controls(self):
         tree = ast.parse((ROOT / 'src/datasets/data_splits.py').read_text())
         tree.body = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == 'split_mode_to_matrix']
