@@ -1,0 +1,16 @@
+defaults:
+  - spawrious_gai_author
+  - _self_
+seed: 42
+dataset_options:
+  name: Spawrious
+  input_size: 224
+  split_mode: spawrious4
+  num_clients: 25
+  num_targets: 4
+  num_groups: 2
+  confounding_factor: 0.5
+server_opt:
+  rounds: 201
+  num_active_clients: 9
+  multiclass: true

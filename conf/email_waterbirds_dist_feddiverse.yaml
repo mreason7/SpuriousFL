@@ -1,0 +1,16 @@
+defaults:
+  - spawrious_gai_author
+  - _self_
+seed: 42
+dataset_options:
+  name: WaterBirds
+  input_size: 224
+  split_mode: waterbirds_dist
+  num_clients: 30
+  num_targets: 2
+  num_groups: 2
+  confounding_factor: 0.5
+server_opt:
+  rounds: 201
+  num_active_clients: 9
+  multiclass: true

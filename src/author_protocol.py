@@ -51,7 +51,8 @@ class AuthorClient(SourceClient):
 
 class AuthorStrategy(SourceStrategy):
     def configure_fit(self, server_round, parameters, client_manager):
-        count = self.conf['dataset_options']['num_clients'] if server_round <= 2 else 9
+        count = (self.conf['dataset_options']['num_clients'] if server_round <= 2
+                 else self.conf.get('server_opt', {}).get('num_active_clients', 9))
         clients = client_manager.sample(num_clients=count, min_num_clients=count,
                                        client_info=self.stored_client_data, server_round=server_round)
         self.client_update_requested = [int(c.cid) for c in clients] if server_round == 2 else []

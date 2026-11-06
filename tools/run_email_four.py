@@ -5,6 +5,7 @@ import hashlib
 import importlib.metadata
 import json
 import os
+import re
 from pathlib import Path
 import statistics
 import subprocess
@@ -14,6 +15,15 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 DATASETS = ('cmnist_gsc', 'spawrious_gsc', 'spawrious_gci', 'spawrious_gai')
+REMAINING_DATASETS = ('waterbirds_dist', 'spawrious_4', 'spawrious_gci_100')
+ALL_DATASETS = DATASETS + REMAINING_DATASETS
+DEFAULT_DATASETS = DATASETS
+BATCH_PREFIX = 'email-four'
+CLIENT_COUNTS = dict(zip(ALL_DATASETS, (24, 24, 24, 25, 30, 25, 100)))
+
+
+def active_clients(dataset):
+    return 12 if dataset == 'spawrious_gci_100' else 9
 
 
 def resolved_config(name):
@@ -26,7 +36,7 @@ def resolved_config(name):
         return OmegaConf.to_container(compose(config_name=name), resolve=True, throw_on_missing=True)
 
 
-def verify(directory, rounds, method, num_clients=24):
+def verify(directory, rounds, method, num_clients=24, selected_clients=9):
     for name in ('config.yaml', 'final/torchmodel.pt', 'client_weights.csv', 'schedule.jsonl',
                  'data_manifest.json', 'data_manifest.sha256', 'initial_weights.sha256',
                  'final_test_metrics.json', 'unified_protocol.json'):
@@ -34,8 +44,8 @@ def verify(directory, rounds, method, num_clients=24):
             raise RuntimeError(f'Missing artifact: {directory / name}')
     rows = [[float(x) for x in line.split(',')] for line in
             (directory / 'client_weights.csv').read_text().splitlines()]
-    counts = ([num_clients, num_clients] + [9] * (rounds - 2) if method == 'feddiverse'
-              else [num_clients] + [9] * (rounds - 1))
+    counts = ([num_clients, num_clients] + [selected_clients] * (rounds - 2) if method == 'feddiverse'
+              else [num_clients] + [selected_clients] * (rounds - 1))
     if len(rows) != rounds or any(len(r) != num_clients or sum(r) != n or
             any(x not in (0, 1) for x in r) for r, n in zip(rows, counts)):
         raise RuntimeError('Incorrect participation schedule')
@@ -49,7 +59,7 @@ def verify(directory, rounds, method, num_clients=24):
 
 def summarize(rows):
     result = []
-    for dataset in DATASETS:
+    for dataset in ALL_DATASETS:
         for method in ('random', 'feddiverse'):
             group = [r for r in rows if r['dataset'] == dataset and r['method'] == method]
             if group:
@@ -64,12 +74,14 @@ def run_summary(job, metrics, directory, stage, elapsed):
     updates = job['rounds'] - int(job['method'] == 'feddiverse')
     lines = ['', '=' * 64, 'FINAL TRAINING SUMMARY', 'Status: COMPLETED AND VERIFIED',
              f"Dataset: {job['dataset']} | Method: {job['method']} | Seed: {job['seed']}",
-             f"Stage: {stage} | Clients: {job['num_clients']} | Selected per update after round 1: 9",
+             f"Stage: {stage} | Clients: {job['num_clients']} | Selected per update after round 1: {job.get('selected_clients', 9)}",
              f"Model updates: {updates} | Flower events: {job['rounds']}",
              f"Elapsed: {elapsed / 60:.2f} minutes",
              f"Final test accuracy: {metrics['test_accuracy']:.4f}%",
              f"Final worst-group accuracy (WGA): {metrics['worst_group']:.4f}%"]
-    groups = {k: metrics[k] for k in ('y0g0', 'y0g1', 'y1g0', 'y1g1') if k in metrics}
+    keys = sorted((k for k in metrics if re.fullmatch(r'y\d+g\d+', k)),
+                  key=lambda k: tuple(map(int, re.findall(r'\d+', k))))
+    groups = {k: metrics[k] for k in keys}
     for name, accuracy in groups.items():
         lines.append(f'  {name}: {accuracy:.4f}%')
     if groups:
@@ -114,7 +126,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--stage', choices=('plan', 'check', 'preflight', 'smoke', 'formal', 'summary'), default='plan')
     p.add_argument('--seeds', default=None)
-    p.add_argument('--datasets', default=','.join(DATASETS))
+    p.add_argument('--datasets', default=','.join(DEFAULT_DATASETS))
     p.add_argument('--gpu', default='0')
     p.add_argument('--batch', type=Path, help='Existing batch folder for summary')
     args = p.parse_args()
@@ -128,7 +140,7 @@ def main():
     datasets = args.datasets.split(',')
     if len(seeds) != len(set(seeds)) or not seeds or any(s < 0 or s >= 2**32 for s in seeds):
         p.error('Seeds must be unique integers in [0, 2**32)')
-    if len(datasets) != len(set(datasets)) or not set(datasets) <= set(DATASETS):
+    if not datasets or len(datasets) != len(set(datasets)) or not set(datasets) <= set(ALL_DATASETS):
         p.error('Unknown or duplicate dataset')
     jobs = []
     for dataset in datasets:
@@ -143,7 +155,7 @@ def main():
                                 'client_opt.left_right_trainer_steps=2']
                 jobs.append(dict(dataset=dataset, seed=seed, method=method, rounds=rounds,
                                  config=config, command=command,
-                                 num_clients=25 if dataset == 'spawrious_gai' else 24))
+                                 num_clients=CLIENT_COUNTS[dataset], selected_clients=active_clients(dataset)))
     if args.stage == 'plan':
         print(json.dumps(dict(protocol='email-four-v1', jobs=jobs), indent=2))
         return
@@ -158,8 +170,10 @@ def main():
             raise RuntimeError(f'Unexpected method difference: {differences}')
         if (fed['dataset_options']['num_clients'], fed['server_opt']['rounds'],
             rnd['server_opt']['rounds'], fed['server_opt']['paper_faithful_pretrain']) != (
-                25 if dataset == 'spawrious_gai' else 24, 201, 200, False):
+                CLIENT_COUNTS[dataset], 201, 200, False):
             raise RuntimeError('Incorrect email protocol settings')
+        if fed['server_opt']['num_active_clients'] != active_clients(dataset):
+            raise RuntimeError('Wrong per-round client budget')
     print('CONFIG CHECK PASSED', flush=True)
     if args.stage == 'check':
         return
@@ -174,6 +188,10 @@ def main():
         for name in ('0', '1'):
             if not (ROOT / 'datasets/spawrious224' / name).is_dir():
                 raise RuntimeError('Missing Spawrious dataset')
+    if 'waterbirds_dist' in datasets:
+        from wilds import get_dataset
+        # Validate local metadata and official splits; do not start a large download implicitly.
+        get_dataset(dataset='waterbirds', download=False, root_dir=str(ROOT / 'datasets'))
     import train_email_four  # Check actual runtime imports before launching training.
     environment = dict(gpu=torch.cuda.get_device_name(0), python=sys.version,
         pretrained_sha256=hashlib.sha256(weights.read_bytes()).hexdigest(),
@@ -183,7 +201,7 @@ def main():
     if args.stage == 'preflight':
         print('PREFLIGHT PASSED; no training started')
         return
-    output = ROOT / 'run_logs' / ('email-four-' + args.stage + '-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
+    output = ROOT / 'run_logs' / (BATCH_PREFIX + '-' + args.stage + '-' + datetime.now().strftime('%Y%m%d-%H%M%S-%f'))
     output.mkdir(parents=True, exist_ok=False)
     commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
     (output / 'plan.json').write_text(json.dumps(dict(jobs=jobs, environment=environment, commit=commit), indent=2))
@@ -206,7 +224,7 @@ def main():
             if len(created) != 1:
                 raise RuntimeError('Expected one new run directory')
             directory = created.pop().parent
-            metrics = verify(directory, job['rounds'], job['method'], job['num_clients'])
+            metrics = verify(directory, job['rounds'], job['method'], job['num_clients'], job['selected_clients'])
             hashes = {n: (directory / n).read_text().strip() for n in
                       ('data_manifest.sha256', 'initial_weights.sha256')}
             key = (job['dataset'], job['seed'])

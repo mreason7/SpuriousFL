@@ -24,6 +24,11 @@ def members(dataset):
     if dataset.__class__.__name__ == 'CMNIST':
         return [[i, int(y), int(g)] for i, (y, g) in enumerate(
             zip(dataset.subset.targets, dataset.subset.attr))]
+    if dataset.__class__.__name__ == 'WaterBirds':
+        subset = dataset.subset
+        source = subset.dataset
+        return [[f'waterbirds/{int(i)}', int(source.y_array[int(i)]),
+                 int(source.metadata_array[int(i)][0])] for i in subset.indices]
     return [[Path(p).resolve().relative_to(Path('datasets').resolve()).as_posix(),
              int(y), int(g)] for p, y, g in dataset.subset]
 
@@ -54,7 +59,8 @@ def split_data(dataset, conf):
     seen, manifest = set(), []
     for cid, client in enumerate(clients):
         rows = [all_members[int(i)] for i in client.indices]
-        counts = [[0, 0], [0, 0]]
+        counts = [[0] * conf['dataset_options']['num_groups']
+                  for _ in range(conf['dataset_options']['num_targets'])]
         for identity, y, g in rows:
             if identity in seen:
                 raise RuntimeError('Overlapping client samples')
@@ -63,7 +69,7 @@ def split_data(dataset, conf):
         if counts != expected[cid]:
             raise RuntimeError(f'Incorrect client matrix {cid}: {counts}')
         manifest.append(dict(cid=cid, counts=counts, samples=rows))
-    if conf['dataset_options']['name'] == 'Spawrious' and seen & {r[0] for r in test_members}:
+    if conf['dataset_options']['name'] in ('Spawrious', 'WaterBirds') and seen & {r[0] for r in test_members}:
         raise RuntimeError('Train/test overlap')
     total = sum(len(c) for c in clients)
     expected_total = sum(sum(map(sum, matrix)) for matrix in expected)
