@@ -1,0 +1,6 @@
+defaults:
+  - email_waterbirds_dist_feddiverse
+  - _self_
+dataset_options:
+  aug_crop: 24
+  aug_horizontal_flip: true

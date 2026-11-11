@@ -19,6 +19,8 @@ REMAINING_DATASETS = ('waterbirds_dist', 'spawrious_4', 'spawrious_gci_100')
 ALL_DATASETS = DATASETS + REMAINING_DATASETS
 DEFAULT_DATASETS = DATASETS
 BATCH_PREFIX = 'email-four'
+CONFIG_SUFFIX = ''
+TRAIN_ENTRY = 'train_email_four.py'
 CLIENT_COUNTS = dict(zip(ALL_DATASETS, (24, 24, 24, 25, 30, 25, 100)))
 
 
@@ -182,8 +184,8 @@ def main():
         for seed in seeds:
             for method in ('random', 'feddiverse'):
                 rounds = (2 if method == 'random' else 3) if args.stage == 'smoke' else (200 if method == 'random' else 201)
-                config = f'email_{dataset}_{method}'
-                command = [sys.executable, 'train_email_four.py', f'--config-name={config}',
+                config = f'email_{dataset}_{method}{CONFIG_SUFFIX}'
+                command = [sys.executable, TRAIN_ENTRY, f'--config-name={config}',
                            f'seed={seed}', f'server_opt.rounds={rounds}']
                 if args.stage == 'smoke':
                     command += ['client_opt.num_steps=2', 'client_opt.biased_trainer_steps=2',
@@ -198,8 +200,8 @@ def main():
                               existing_runs=len(existing)), indent=2))
         return
     for dataset in datasets:
-        fed = resolved_config(f'email_{dataset}_feddiverse')
-        rnd = resolved_config(f'email_{dataset}_random')
+        fed = resolved_config(f'email_{dataset}_feddiverse{CONFIG_SUFFIX}')
+        rnd = resolved_config(f'email_{dataset}_random{CONFIG_SUFFIX}')
         for key in ('client_opt', 'model_options', 'dataset_options', 'machine', 'seed'):
             if fed[key] != rnd[key]:
                 raise RuntimeError(f'Unmatched pair: {dataset}/{key}')
