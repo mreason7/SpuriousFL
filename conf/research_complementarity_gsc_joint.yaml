@@ -1,0 +1,6 @@
+defaults:
+  - research_complementarity_gsc_base
+  - _self_
+
+server_opt:
+  selection_method: joint_direction_oracle

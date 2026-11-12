@@ -1,0 +1,42 @@
+defaults:
+  - spawrious_gsc_feddiverse_paper
+  - _self_
+
+# Separate research protocol: do not pool with author-email reproduction runs.
+research:
+  enabled: true
+  training_seed: 142
+  validation_seed: 1042
+  validation_fraction: 0.1
+  run_tag: complementarity-gsc
+
+server_opt:
+  client_info: joint_oracle
+  client_id_mapping: candidate
+  selector_mode: guarded
+  joint_target: [[0.25, 0.25], [0.25, 0.25]]
+  joint_max_swaps: 100
+
+client_opt:
+  num_workers: 0
+  num_steps: null
+
+model_options:
+  hidden_units: null
+
+dataset_options:
+  categories: null
+  confounding_factor: null
+  data_shuffle_seed: null
+  dirichlet_alpha: null
+  group_name: null
+  num_celebrity: null
+  regions: null
+  target_name: null
+
+machine:
+  ray_init_args:
+    include_dashboard: false
+    object_store_memory: 4294967296
+
+wandb: false

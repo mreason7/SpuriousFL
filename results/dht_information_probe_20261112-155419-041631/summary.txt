@@ -1,0 +1,15 @@
+DHT information probe: structural evidence only; NO new model training.
+cmnist_gsc: equal-DHT/different-joint pairs=23; random mean error=0.062329; sampled best=0.001975; same-DHT subset error gap=0.063210
+spawrious_gsc: equal-DHT/different-joint pairs=23; random mean error=0.062329; sampled best=0.001975; same-DHT subset error gap=0.063210
+spawrious_gci: equal-DHT/different-joint pairs=23; random mean error=0.062004; sampled best=0.001975; same-DHT subset error gap=0.063210
+spawrious_gai: equal-DHT/different-joint pairs=4; random mean error=0.147970; sampled best=0.089899; same-DHT subset error gap=0.079333
+
+Input: archived historical TRAINING group counts; not the newer author-email protocol.
+DHT order is CI, AI, SC. Joint order is y0g0, y0g1, y1g0, y1g1.
+Joint exposure is the equal-client mean of each normalized client distribution.
+Uniform joint target is a prespecified diagnostic; no test labels/metrics are read.
+This is a sampled subset search, not a global optimum or a training performance upper bound.
+Repeated draws are Monte Carlo samples, not independent training seeds.
+A uniform joint distribution may be infeasible for a given dataset or budget.
+Coverage is a statistical proxy; actual SGD exposure and WGA require separate training experiments.
+No raw images, training checkpoints, test metrics, or historical files were modified.

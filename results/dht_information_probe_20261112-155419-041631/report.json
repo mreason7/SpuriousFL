@@ -1,0 +1,529 @@
+{
+  "seed": 20261112,
+  "self_checks": "PASS",
+  "datasets": {
+    "cmnist_gsc": {
+      "clients": 24,
+      "training_samples": 4800,
+      "budget": 9,
+      "draws": 10000,
+      "unique_subsets": 9965,
+      "equal_dht_different_distribution_pairs": 23,
+      "largest_pair_collision": {
+        "ids": [
+          0,
+          2
+        ],
+        "tv": 0.8,
+        "dht": [
+          0.5310044064107189,
+          0.0,
+          0.0
+        ],
+        "joint_distributions": [
+          [
+            0.45,
+            0.45,
+            0.05,
+            0.05
+          ],
+          [
+            0.05,
+            0.05,
+            0.45,
+            0.45
+          ]
+        ]
+      },
+      "random_mean_objective": 0.062328888888888885,
+      "random_mean_min_group_share": 0.10900000000000001,
+      "best_sampled_subset": {
+        "ids": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6,
+          11,
+          17,
+          23
+        ],
+        "joint": [
+          0.27222222222222225,
+          0.2277777777777778,
+          0.2277777777777778,
+          0.27222222222222225
+        ],
+        "objective": 0.001975308641975309,
+        "min_group_share": 0.2277777777777778
+      },
+      "same_dht_subset_counterexample": {
+        "gap": 0.06320987654320985,
+        "lower_error": {
+          "ids": [
+            8,
+            9,
+            11,
+            15,
+            16,
+            19,
+            21,
+            22,
+            23
+          ],
+          "joint": [
+            0.40555555555555556,
+            0.09444444444444446,
+            0.09444444444444446,
+            0.40555555555555556
+          ],
+          "objective": 0.09679012345679013,
+          "min_group_share": 0.09444444444444446
+        },
+        "higher_error": {
+          "ids": [
+            9,
+            11,
+            12,
+            14,
+            15,
+            16,
+            17,
+            18,
+            20
+          ],
+          "joint": [
+            0.44999999999999996,
+            0.05,
+            0.05,
+            0.44999999999999996
+          ],
+          "objective": 0.15999999999999998,
+          "min_group_share": 0.05
+        }
+      },
+      "sources": [
+        {
+          "path": "checkpoints\\local_backup\\cmnist_gsc_official_rng_v1\\checkpoints\\20260908-113933\\client_info.json",
+          "sha256": "23473fe62aaf13f1538ac56d7f0ba15363b6e60531be7d5a334da860335e1457"
+        },
+        {
+          "path": "checkpoints\\local_backup\\cmnist_gsc_official_rng_v1\\checkpoints\\20260909-025420\\client_info.json",
+          "sha256": "e2932f108af1e99e5336022a827e8e31207057c7df189087d37ffbbda64a53ff"
+        },
+        {
+          "path": "checkpoints\\local_backup\\cmnist_gsc_official_rng_v1\\checkpoints\\20260909-034311\\client_info.json",
+          "sha256": "62d02bacecb1558f8328b96aae41795f2eb67e4d1cb91b9009474a2688e2596b"
+        },
+        {
+          "path": "checkpoints\\local_backup\\cmnist_gsc_official_rng_v1\\checkpoints\\20260909-104452\\client_info.json",
+          "sha256": "5dacbef81ec1fb5fdc1b80f5bb658c8e7a358ab6484fba74b33cd059bb9b9685"
+        },
+        {
+          "path": "checkpoints\\local_backup\\cmnist_gsc_official_rng_v1\\checkpoints\\20260909-112853\\client_info.json",
+          "sha256": "3edc8870ca8b34dbf7b92d9a3ca5a40d114f3db47ad66e16de990982a9365362"
+        },
+        {
+          "path": "checkpoints\\local_backup\\cmnist_gsc_official_rng_v1\\checkpoints\\20260909-121342\\client_info.json",
+          "sha256": "0c16afaf923124dff6458a8c55d327c40a421eac0248891327f36291cbeef52b"
+        }
+      ]
+    },
+    "spawrious_gsc": {
+      "clients": 24,
+      "training_samples": 4800,
+      "budget": 9,
+      "draws": 10000,
+      "unique_subsets": 9965,
+      "equal_dht_different_distribution_pairs": 23,
+      "largest_pair_collision": {
+        "ids": [
+          0,
+          2
+        ],
+        "tv": 0.8,
+        "dht": [
+          0.5310044064107189,
+          0.0,
+          0.0
+        ],
+        "joint_distributions": [
+          [
+            0.45,
+            0.45,
+            0.05,
+            0.05
+          ],
+          [
+            0.05,
+            0.05,
+            0.45,
+            0.45
+          ]
+        ]
+      },
+      "random_mean_objective": 0.062328888888888885,
+      "random_mean_min_group_share": 0.10900000000000001,
+      "best_sampled_subset": {
+        "ids": [
+          0,
+          1,
+          2,
+          3,
+          5,
+          6,
+          11,
+          17,
+          23
+        ],
+        "joint": [
+          0.27222222222222225,
+          0.2277777777777778,
+          0.2277777777777778,
+          0.27222222222222225
+        ],
+        "objective": 0.001975308641975309,
+        "min_group_share": 0.2277777777777778
+      },
+      "same_dht_subset_counterexample": {
+        "gap": 0.06320987654320985,
+        "lower_error": {
+          "ids": [
+            8,
+            9,
+            11,
+            15,
+            16,
+            19,
+            21,
+            22,
+            23
+          ],
+          "joint": [
+            0.40555555555555556,
+            0.09444444444444446,
+            0.09444444444444446,
+            0.40555555555555556
+          ],
+          "objective": 0.09679012345679013,
+          "min_group_share": 0.09444444444444446
+        },
+        "higher_error": {
+          "ids": [
+            9,
+            11,
+            12,
+            14,
+            15,
+            16,
+            17,
+            18,
+            20
+          ],
+          "joint": [
+            0.44999999999999996,
+            0.05,
+            0.05,
+            0.44999999999999996
+          ],
+          "objective": 0.15999999999999998,
+          "min_group_share": 0.05
+        }
+      },
+      "sources": [
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gsc_official_rng_v1\\checkpoints\\20260911-025949\\client_info.json",
+          "sha256": "81fbec56031a2b402b3eaac0615f3ef3edc4b9e92d123d06a9cf6135e4d151f1"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gsc_official_rng_v1\\checkpoints\\20260911-035247\\client_info.json",
+          "sha256": "e86425d60dadd422b61f050e2ab9edb70f7c1bdb139cb5df935481a699d32e27"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gsc_official_rng_v1\\checkpoints\\20260911-044304\\client_info.json",
+          "sha256": "a28598dc7431dceeb4c6cc5ae79ab959f98dae4c5373f715a190d5a16281c1be"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gsc_official_rng_v1\\checkpoints\\20260911-084525\\client_info.json",
+          "sha256": "57149ee2240230322c3d3b83e7c7c743b6ff44f21c67e3787204ea069b335b53"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gsc_official_rng_v1\\checkpoints\\20260911-093656\\client_info.json",
+          "sha256": "91caa3a8f5caf7a5160ac925efdbe76730be73524f1b28121049fd8e8d425305"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gsc_official_rng_v1\\checkpoints\\20260911-102916\\client_info.json",
+          "sha256": "35447f549e8343a67c7020f4d3a5bfc1c62a21ac3dfc0155da8d3594be3fa0f7"
+        }
+      ]
+    },
+    "spawrious_gci": {
+      "clients": 24,
+      "training_samples": 4800,
+      "budget": 9,
+      "draws": 10000,
+      "unique_subsets": 9965,
+      "equal_dht_different_distribution_pairs": 23,
+      "largest_pair_collision": {
+        "ids": [
+          0,
+          15
+        ],
+        "tv": 0.8,
+        "dht": [
+          0.5310044064107189,
+          0.0,
+          0.0
+        ],
+        "joint_distributions": [
+          [
+            0.45,
+            0.45,
+            0.05,
+            0.05
+          ],
+          [
+            0.05,
+            0.05,
+            0.45,
+            0.45
+          ]
+        ]
+      },
+      "random_mean_objective": 0.06200375308641975,
+      "random_mean_min_group_share": 0.10900000000000001,
+      "best_sampled_subset": {
+        "ids": [
+          5,
+          6,
+          15,
+          17,
+          18,
+          20,
+          21,
+          22,
+          23
+        ],
+        "joint": [
+          0.27222222222222225,
+          0.27222222222222225,
+          0.2277777777777778,
+          0.2277777777777778
+        ],
+        "objective": 0.001975308641975309,
+        "min_group_share": 0.2277777777777778
+      },
+      "same_dht_subset_counterexample": {
+        "gap": 0.06320987654320985,
+        "lower_error": {
+          "ids": [
+            2,
+            3,
+            4,
+            8,
+            9,
+            11,
+            12,
+            14,
+            15
+          ],
+          "joint": [
+            0.40555555555555556,
+            0.40555555555555556,
+            0.09444444444444446,
+            0.09444444444444446
+          ],
+          "objective": 0.09679012345679013,
+          "min_group_share": 0.09444444444444446
+        },
+        "higher_error": {
+          "ids": [
+            0,
+            1,
+            2,
+            5,
+            6,
+            10,
+            12,
+            13,
+            14
+          ],
+          "joint": [
+            0.44999999999999996,
+            0.44999999999999996,
+            0.05,
+            0.05
+          ],
+          "objective": 0.15999999999999998,
+          "min_group_share": 0.05
+        }
+      },
+      "sources": [
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gci_official_rng_v1\\checkpoints\\20260914-032515\\client_info.json",
+          "sha256": "892b7d1230a86ce3b109dfe5b707f4f97fb4f1c89377333e40fc1dfe2473381e"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gci_official_rng_v1\\checkpoints\\20260914-041522\\client_info.json",
+          "sha256": "d4aa997ba153e7a9b8ad8397465b985450bc9e1faa2ffc0e646fb87b97b28202"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gci_official_rng_v1\\checkpoints\\20260914-050500\\client_info.json",
+          "sha256": "a50259d3c2720b637f83022756d029ecc4a3ff66c4a0d0c34d827583ce0f7b7e"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gci_official_rng_v1\\checkpoints\\20260914-064256\\client_info.json",
+          "sha256": "793c23b5d7863a0e05b64c4637e8244d08521e5133880727f90a06d868c8fbf6"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gci_official_rng_v1\\checkpoints\\20260914-073615\\client_info.json",
+          "sha256": "38ee517e2a3b7dce82783bcd96482c95ea529bbc6fcbb07a326c24147c257e37"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gci_official_rng_v1\\checkpoints\\20260914-082934\\client_info.json",
+          "sha256": "7b2ea225c24e330e12b2eaf3566e02033e766c06b656674c6c65b0f956208c85"
+        }
+      ]
+    },
+    "spawrious_gai": {
+      "clients": 25,
+      "training_samples": 4600,
+      "budget": 9,
+      "draws": 10000,
+      "unique_subsets": 9978,
+      "equal_dht_different_distribution_pairs": 4,
+      "largest_pair_collision": {
+        "ids": [
+          2,
+          4
+        ],
+        "tv": 0.8918918918918919,
+        "dht": [
+          0.6966251639135862,
+          0.6966251639135862,
+          0.23819431300896743
+        ],
+        "joint_distributions": [
+          [
+            0.918918918918919,
+            0.02702702702702703,
+            0.02702702702702703,
+            0.02702702702702703
+          ],
+          [
+            0.02702702702702703,
+            0.02702702702702703,
+            0.918918918918919,
+            0.02702702702702703
+          ]
+        ]
+      },
+      "random_mean_objective": 0.1479695000002626,
+      "random_mean_min_group_share": 0.022327287001366696,
+      "best_sampled_subset": {
+        "ids": [
+          0,
+          1,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          14
+        ],
+        "joint": [
+          0.41556647021542653,
+          0.1926148066565524,
+          0.35922209774202185,
+          0.032596625385999195
+        ],
+        "objective": 0.08989901040338392,
+        "min_group_share": 0.032596625385999195
+      },
+      "same_dht_subset_counterexample": {
+        "gap": 0.07933288085090744,
+        "lower_error": {
+          "ids": [
+            0,
+            1,
+            4,
+            5,
+            8,
+            9,
+            11,
+            15,
+            20
+          ],
+          "joint": [
+            0.408500580796596,
+            0.1594051263880486,
+            0.40656355684818685,
+            0.025530735967168604
+          ],
+          "objective": 0.10822846306602012,
+          "min_group_share": 0.025530735967168604
+        },
+        "higher_error": {
+          "ids": [
+            0,
+            1,
+            2,
+            3,
+            8,
+            9,
+            17,
+            21,
+            23
+          ],
+          "joint": [
+            0.6066987789947942,
+            0.1594051263880486,
+            0.20836535864998862,
+            0.025530735967168604
+          ],
+          "objective": 0.18756134391692755,
+          "min_group_share": 0.025530735967168604
+        }
+      },
+      "sources": [
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gai_official_rng_v1\\checkpoints\\20260915-081441\\client_info.json",
+          "sha256": "d962dda2585fb07e306eb55b1748165e70da8a076e8369e5596a8860dc553939"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gai_official_rng_v1\\checkpoints\\20260915-090238\\client_info.json",
+          "sha256": "9fe019a858a9121a77a8a8c5b32e5a0b36afb01440d104ad38b2e36414b8a343"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gai_official_rng_v1\\checkpoints\\20260915-095113\\client_info.json",
+          "sha256": "f4a00577a3c3f76980e6abde40ea54d88edfba0ff127205cb1c6e77763808c1b"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gai_official_rng_v1\\checkpoints\\20260916-020015\\client_info.json",
+          "sha256": "d7589550d468c3386d8b67ef4917ce65bf03ea3a900c8be00198418239f76df2"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gai_official_rng_v1\\checkpoints\\20260916-025153\\client_info.json",
+          "sha256": "56663404c39c2261da79ba05e6191bfa07a263a947eba7a4ce3ff4aa05be22ff"
+        },
+        {
+          "path": "checkpoints\\local_backup\\spawrious_gai_official_rng_v1\\checkpoints\\20260916-034207\\client_info.json",
+          "sha256": "3bb037553139b728fd491d676d535cc36e0ce1c45c73725195ef0c8fd92a0c7c"
+        }
+      ]
+    }
+  },
+  "limitations": [
+    "Input: archived historical TRAINING group counts; not the newer author-email protocol.",
+    "DHT order is CI, AI, SC. Joint order is y0g0, y0g1, y1g0, y1g1.",
+    "Joint exposure is the equal-client mean of each normalized client distribution.",
+    "Uniform joint target is a prespecified diagnostic; no test labels/metrics are read.",
+    "This is a sampled subset search, not a global optimum or a training performance upper bound.",
+    "Repeated draws are Monte Carlo samples, not independent training seeds.",
+    "A uniform joint distribution may be infeasible for a given dataset or budget.",
+    "Coverage is a statistical proxy; actual SGD exposure and WGA require separate training experiments.",
+    "No raw images, training checkpoints, test metrics, or historical files were modified."
+  ]
+}
