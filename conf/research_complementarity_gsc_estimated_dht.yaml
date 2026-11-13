@@ -1,0 +1,7 @@
+defaults:
+  - research_complementarity_gsc_dht
+  - _self_
+
+# Change only the information source; retain the controlled DHT selector.
+server_opt:
+  client_info: triplets_Npredicted
